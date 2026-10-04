@@ -74,3 +74,40 @@ export function candidateDateRange(dates: string[]): { from: string; to: string 
     to: toIso(Math.max(...days) + DUPLICATE_WINDOW_DAYS),
   };
 }
+
+export type ReferenceCandidate = DuplicateCandidate & { reference: string | null };
+
+/** Same account + same reference (case-insensitive) — the strongest duplicate signal. */
+export function findReferenceMatch(
+  draft: Pick<TxnDraft, "accountId" | "reference">,
+  candidates: ReferenceCandidate[],
+): ReferenceCandidate | null {
+  const ref = draft.reference?.trim().toLowerCase();
+  if (!draft.accountId || !ref) return null;
+  return candidates.find((c) => c.account_id === draft.accountId && c.reference?.trim().toLowerCase() === ref) ?? null;
+}
+
+export type StoredDuplicateFlag = {
+  duplicate_of_transaction_id: string | null;
+  duplicate_of_queue_id: string | null;
+  duplicate_reviewed: boolean;
+};
+
+/**
+ * What to store after re-checking a Queue item. A flag the user already answered ("Keep") stays
+ * answered unless the match itself changes; a new match is always asked about again.
+ */
+export function duplicateFlagUpdate(
+  stored: StoredDuplicateFlag,
+  found: Pick<DuplicateCandidate, "id" | "kind"> | null,
+): { changed: boolean; fields: StoredDuplicateFlag } {
+  const txn = found?.kind === "transaction" ? found.id : null;
+  const queue = found?.kind === "queue" ? found.id : null;
+  if (txn === stored.duplicate_of_transaction_id && queue === stored.duplicate_of_queue_id) {
+    return { changed: false, fields: stored };
+  }
+  return {
+    changed: true,
+    fields: { duplicate_of_transaction_id: txn, duplicate_of_queue_id: queue, duplicate_reviewed: false },
+  };
+}

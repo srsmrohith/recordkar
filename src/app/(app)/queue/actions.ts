@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { friendlyDbError, loadMaster } from "@/lib/data";
+import { recheckQueueItem } from "@/lib/duplicates-server";
 import {
   allowedCounterKinds,
   buildComponents,
@@ -27,8 +28,15 @@ type QueueRow = DraftRow & {
 
 const revalidate = () => revalidatePath("/", "layout");
 
-/** Persist inline edits from a Queue card (autosaved). */
-export async function saveQueueItem(id: string, draft: TxnDraft): Promise<{ ok: boolean; error?: string }> {
+/**
+ * Persist inline edits from a Queue card (autosaved), then re-run the duplicate checks — e.g. once an
+ * unrecognised account is fixed, the reference and fuzzy checks can finally run. Approval saves first,
+ * so it always approves against an up-to-date duplicate flag.
+ */
+export async function saveQueueItem(
+  id: string,
+  draft: TxnDraft,
+): Promise<{ ok: boolean; error?: string; duplicateChanged?: boolean }> {
   const { supabase } = await requireUser();
   const { reference, ...row } = draftToRow(draft);
   const { error } = await supabase
@@ -36,7 +44,14 @@ export async function saveQueueItem(id: string, draft: TxnDraft): Promise<{ ok: 
     .update({ ...row, reference })
     .eq("id", id)
     .eq("status", "pending");
-  return error ? { ok: false, error: friendlyDbError(error) } : { ok: true };
+  if (error) return { ok: false, error: friendlyDbError(error) };
+  try {
+    const duplicateChanged = await recheckQueueItem(supabase, id, draft);
+    if (duplicateChanged) revalidate();
+    return { ok: true, duplicateChanged };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Couldn't check for duplicates." };
+  }
 }
 
 async function postOne(supabase: SupabaseServer, master: MasterData, row: QueueRow): Promise<string | null> {

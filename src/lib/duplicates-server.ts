@@ -1,6 +1,13 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { candidateDateRange, findFuzzyDuplicate, type DuplicateCandidate } from "@/lib/engine/duplicates";
+import {
+  candidateDateRange,
+  duplicateFlagUpdate,
+  findFuzzyDuplicate,
+  findReferenceMatch,
+  type DuplicateCandidate,
+  type ReferenceCandidate,
+} from "@/lib/engine/duplicates";
 import type { TxnDraft } from "@/lib/engine/types";
 
 const COLS = "id, account_id, amount, txn_date, merchant, description";
@@ -53,4 +60,47 @@ export async function findDuplicateFor(
 ): Promise<DuplicateCandidate | null> {
   const candidates = await loadDuplicateCandidates(supabase, [draft], opts);
   return findFuzzyDuplicate(draft, candidates);
+}
+
+/**
+ * Re-run duplicate checks for a Queue item after it was edited (e.g. its account was fixed on the
+ * card). Same account + same reference wins over a fuzzy match. Returns whether the flag changed.
+ */
+export async function recheckQueueItem(supabase: SupabaseClient, queueId: string, draft: TxnDraft): Promise<boolean> {
+  const stored = await supabase
+    .from("transaction_queue")
+    .select("duplicate_of_transaction_id, duplicate_of_queue_id, duplicate_reviewed")
+    .eq("id", queueId)
+    .maybeSingle();
+  if (stored.error) throw new Error(stored.error.message);
+  if (!stored.data) return false;
+
+  let found: Pick<DuplicateCandidate, "id" | "kind"> | null = null;
+  if (draft.accountId && draft.reference?.trim()) {
+    // Exact, case-insensitive match: escape ilike wildcards that may appear in bank references.
+    const ref = draft.reference.trim().replace(/[\\%_]/g, (c) => `\\${c}`);
+    const [posted, queued] = await Promise.all([
+      supabase.from("transaction_references").select("transaction_id, account_id, reference").eq("account_id", draft.accountId).ilike("reference", ref),
+      supabase
+        .from("transaction_queue")
+        .select("id, account_id, reference")
+        .eq("account_id", draft.accountId)
+        .ilike("reference", ref)
+        .neq("status", "discarded")
+        .neq("id", queueId),
+    ]);
+    if (posted.error || queued.error) throw new Error((posted.error ?? queued.error)!.message);
+    const refCandidates: ReferenceCandidate[] = [
+      ...posted.data.map((r) => ({ id: r.transaction_id, kind: "transaction" as const, account_id: r.account_id, reference: r.reference, amount: null, txn_date: null, merchant: null, description: null })),
+      ...queued.data.map((q) => ({ id: q.id, kind: "queue" as const, account_id: q.account_id, reference: q.reference, amount: null, txn_date: null, merchant: null, description: null })),
+    ];
+    found = findReferenceMatch(draft, refCandidates);
+  }
+  if (!found) found = await findDuplicateFor(supabase, draft, { excludeQueueIds: [queueId] });
+
+  const update = duplicateFlagUpdate(stored.data, found);
+  if (!update.changed) return false;
+  const { error } = await supabase.from("transaction_queue").update(update.fields).eq("id", queueId);
+  if (error) throw new Error(error.message);
+  return true;
 }
