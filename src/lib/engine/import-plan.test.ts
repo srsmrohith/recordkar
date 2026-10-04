@@ -24,6 +24,26 @@ const draft = (over: Partial<TxnDraft>): TxnDraft => ({
 
 const ctx = (recorded: string[] = []) => ({ recordedKeys: new Set(recorded), candidates: [], master });
 
+describe("problem 3: separate reasons for skipped rows", () => {
+  const row = (ref: string) => ({ draft: draft({ reference: ref }), issues: {}, rawAccount: "HDFC Bank" });
+
+  it("tells a repeat within the same file apart from a row already recorded", () => {
+    const { plans, summary } = planImport([row("A"), row("A"), row("B")], ctx(["acct:bank|b"]));
+    expect(plans.map((p) => p.skip)).toEqual([null, "in_file", "already_recorded"]);
+    expect(summary).toMatchObject({ skipped: 2, skippedInFile: 1, skippedAlreadyRecorded: 1, queued: 1 });
+  });
+
+  it("calls a row 'already recorded' when it is both recorded and repeated in the file", () => {
+    const { plans } = planImport([row("B"), row("B")], ctx(["acct:bank|b"]));
+    expect(plans.map((p) => p.skip)).toEqual(["already_recorded", "already_recorded"]);
+  });
+
+  it("matches the queue-test file: one in-file repeat (REF103), nothing else recorded", () => {
+    const { summary } = planImport([row("REF103"), row("REF103"), row("REF104")], ctx());
+    expect(summary).toMatchObject({ skippedInFile: 1, skippedAlreadyRecorded: 0 });
+  });
+});
+
 describe("problem 2: count every row that can't be approved yet", () => {
   it("counts blank required fields (no category), not only problems with file values", () => {
     const rows = [

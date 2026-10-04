@@ -78,7 +78,16 @@ export function UploadForm() {
                   .join(", ")}
               </li>
             )}
-            {state.skipped > 0 && <li>{state.skipped} skipped — same account and reference already recorded</li>}
+            {state.skippedInFile > 0 && (
+              <li>
+                {state.skippedInFile} skipped — repeated earlier in this file (same account and reference)
+              </li>
+            )}
+            {state.skippedAlreadyRecorded > 0 && (
+              <li>
+                {state.skippedAlreadyRecorded} skipped — already recorded (same account and reference)
+              </li>
+            )}
           </ul>
           {state.queued > 0 && <Link href="/queue" className="btn-primary">Review in Queue</Link>}
         </div>

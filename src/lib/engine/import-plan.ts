@@ -27,8 +27,11 @@ export type PlanInput = {
   rawAccount: string | null;
 };
 
+/** Why a row was skipped: a repeat earlier in the same file, or already recorded before this upload. */
+export type SkipReason = "in_file" | "already_recorded";
+
 export type RowPlan = {
-  skip: boolean;
+  skip: SkipReason | null;
   duplicate: DuplicateCandidate | null;
   /** Missing, blank or unrecognised required details — the same rules the Approve button uses. */
   needsInfo: boolean;
@@ -37,7 +40,10 @@ export type RowPlan = {
 export type ImportSummary = {
   total: number;
   queued: number;
+  /** skippedInFile + skippedAlreadyRecorded. */
   skipped: number;
+  skippedInFile: number;
+  skippedAlreadyRecorded: number;
   needsInfo: number;
   flagged: number;
   /** Queued rows that can't be approved yet: missing details and/or a possible duplicate. */
@@ -49,16 +55,33 @@ export function planImport(
   rows: PlanInput[],
   ctx: { recordedKeys: Set<string>; candidates: DuplicateCandidate[]; master: MasterData },
 ): { plans: RowPlan[]; summary: ImportSummary } {
-  const seen = new Set(ctx.recordedKeys);
-  const summary: ImportSummary = { total: rows.length, queued: 0, skipped: 0, needsInfo: 0, flagged: 0, notReady: 0, ready: 0 };
+  const inFile = new Set<string>();
+  const summary: ImportSummary = {
+    total: rows.length,
+    queued: 0,
+    skipped: 0,
+    skippedInFile: 0,
+    skippedAlreadyRecorded: 0,
+    needsInfo: 0,
+    flagged: 0,
+    notReady: 0,
+    ready: 0,
+  };
 
   const plans = rows.map((row): RowPlan => {
     const keys = referenceKeys(row.draft.accountId, row.rawAccount, row.draft.reference);
-    const isRepeat = keys.some((k) => seen.has(k));
-    keys.forEach((k) => seen.add(k));
-    if (isRepeat) {
+    // "Already recorded" wins when a row is both recorded before and repeated in this file.
+    const reason: SkipReason | null = keys.some((k) => ctx.recordedKeys.has(k))
+      ? "already_recorded"
+      : keys.some((k) => inFile.has(k))
+        ? "in_file"
+        : null;
+    keys.forEach((k) => inFile.add(k));
+    if (reason) {
       summary.skipped++;
-      return { skip: true, duplicate: null, needsInfo: false };
+      if (reason === "in_file") summary.skippedInFile++;
+      else summary.skippedAlreadyRecorded++;
+      return { skip: reason, duplicate: null, needsInfo: false };
     }
 
     const duplicate = findFuzzyDuplicate(row.draft, ctx.candidates);
@@ -70,7 +93,7 @@ export function planImport(
     if (duplicate) summary.flagged++;
     if (needsInfo || duplicate) summary.notReady++;
     else summary.ready++;
-    return { skip: false, duplicate, needsInfo };
+    return { skip: null, duplicate, needsInfo };
   });
 
   return { plans, summary };
