@@ -82,7 +82,7 @@ export function counterLabel(type: TxnType | null, direction: Direction | null):
     case "TRANSFER":
       return direction === "CREDIT" ? "From account" : "To account";
     default:
-      return "Other side";
+      return "Linked to";
   }
 }
 

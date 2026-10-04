@@ -72,7 +72,7 @@ describe("edit log", () => {
     expect(changedRows(snap({ amount: "480.00", notes: "" }), snap({ amount: 480, notes: null }), master)).toEqual([]);
   });
 
-  it("summarises debit/credit line changes as one Accounting entry row", () => {
+  it("describes debit/credit line changes in plain field rows, with no Dr/Cr jargon", () => {
     const after = snap({
       category_id: "travel",
       account_id: "card",
@@ -81,11 +81,33 @@ describe("edit log", () => {
         { side: "DR", amount: 480, category_id: "travel" },
       ],
     });
-    expect(changedRows(snap(), after, master)).toEqual([
+    const rows = changedRows(snap(), after, master);
+    expect(rows).toEqual([
       { label: "Account", from: "HDFC Savings", to: "ICICI Card" },
       { label: "Category", from: "Food & Dining", to: "Travel" },
-      { label: "Accounting entry", from: "Dr Food & Dining · Cr HDFC Savings", to: "Dr Travel · Cr ICICI Card" },
     ]);
+    expect(JSON.stringify(rows)).not.toMatch(/\b(Dr|Cr)\b/);
+  });
+
+  it("uses plain words for direction", () => {
+    const rows = changedRows(snap({ type: "OTHER" }), snap({ type: "OTHER", direction: "CREDIT" }), master);
+    expect(rows).toEqual([{ label: "Money in/out", from: "Money out", to: "Money in" }]);
+  });
+
+  it("shows opening balances as a starting balance, not 'Other side: Opening Balance'", () => {
+    const opening = snap({
+      type: "OPENING_BALANCE",
+      direction: "CREDIT",
+      category_id: null,
+      counter_system_head: "opening_balance",
+      merchant: null,
+      description: "Opening balance",
+      amount: 50000,
+    });
+    const item = describeEntry(entry("create", null, opening), master);
+    expect(item.title).toBe("Opening balance");
+    expect(item.rows).toContainEqual({ label: "Recorded as", value: "Starting balance" });
+    expect(JSON.stringify(item.rows)).not.toMatch(/Other side|Opening Balance/);
   });
 
   it("names events, references and dates", () => {

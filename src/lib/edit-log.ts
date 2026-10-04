@@ -47,10 +47,19 @@ function counterLabelFor(type: unknown): string {
       return "Income head";
     case "TRANSFER":
       return "Other account";
+    case "OPENING_BALANCE":
+    case "ADJUSTMENT":
+      return "Recorded as";
     default:
-      return "Other side";
+      return "Linked to";
   }
 }
+
+/** Plain names for system heads — no accounting jargon outside the treatment preview. */
+const SYSTEM_HEAD_PLAIN: Record<SystemHead, string> = {
+  opening_balance: "Starting balance",
+  balance_adjustment: "Balance correction",
+};
 
 type Field = {
   label: string | ((s: TxnSnapshot) => string);
@@ -67,9 +76,9 @@ const FIELDS: Record<string, Field> = {
   date: { label: "Date", key: (s) => str(s.txn_date), show: (s) => formatDate(str(s.txn_date)) },
   type: { label: "Type", key: (s) => str(s.type), show: (s) => (s.type ? TXN_TYPE_LABELS[s.type as TxnType] ?? String(s.type) : "—") },
   direction: {
-    label: "Debit/Credit",
+    label: "Money in/out",
     key: (s) => str(s.direction),
-    show: (s) => (s.direction === "DEBIT" ? "Debit" : s.direction === "CREDIT" ? "Credit" : "—"),
+    show: (s) => (s.direction === "DEBIT" ? "Money out" : s.direction === "CREDIT" ? "Money in" : "—"),
   },
   amount: { label: "Amount", key: (s) => num(s.amount), show: (s) => (num(s.amount) === null ? "—" : inr(num(s.amount))) },
   account: { label: "Account", key: (s) => str(s.account_id), show: (s, m) => nameOf(m.accounts, s.account_id) },
@@ -81,7 +90,8 @@ const FIELDS: Record<string, Field> = {
     },
     show: (s, m) => {
       const c = counterOf(s);
-      return c ? headName(c, m) : "—";
+      if (!c) return "—";
+      return c.system_head ? SYSTEM_HEAD_PLAIN[c.system_head] : headName(c, m);
     },
   },
   merchant: { label: "Merchant", key: (s) => str(s.merchant), show: (s) => str(s.merchant) ?? "—" },
@@ -98,34 +108,22 @@ const FIELDS: Record<string, Field> = {
 
 const labelOf = (f: Field, s: TxnSnapshot) => (typeof f.label === "function" ? f.label(s) : f.label);
 
-/** "Dr Food & Dining · Cr HDFC Savings" — which heads are debited/credited, independent of amount. */
-export function entryHeads(s: TxnSnapshot, m: MasterData): string | null {
-  const comps = s.components ?? [];
-  if (comps.length === 0) return null;
-  return [...comps]
-    .sort((a, b) => (a.side === b.side ? 0 : a.side === "DR" ? -1 : 1))
-    .map((c) => `${c.side === "DR" ? "Dr" : "Cr"} ${headName(c, m)}`)
-    .join(" · ");
-}
-
 function title(s: TxnSnapshot | null, m: MasterData): string {
   if (!s) return "Transaction";
-  const c = counterOf(s);
-  return str(s.merchant) ?? str(s.description) ?? (c ? headName(c, m) : null) ?? FIELDS.type.show(s, m);
+  return str(s.merchant) ?? str(s.description) ?? (counterOf(s) ? FIELDS.counter.show(s, m) : FIELDS.type.show(s, m));
 }
 
-/** Changed fields between two snapshots, one row per field. */
+/**
+ * Changed fields between two snapshots, one row per field. The debit/credit lines are derived from
+ * these fields (type, account, category, amount, direction), so their change is already described in
+ * plain words here — Dr/Cr only appears in the treatment preview, never in the Edit log.
+ */
 export function changedRows(before: TxnSnapshot, after: TxnSnapshot, m: MasterData): EditLogRow[] {
   const rows: EditLogRow[] = [];
   for (const f of Object.values(FIELDS)) {
     if (f.key(before) === f.key(after)) continue;
     rows.push({ label: labelOf(f, after), from: f.show(before, m), to: f.show(after, m) });
   }
-  // Debit/credit lines are derived from the fields above; summarise them as one row, and only when the
-  // heads themselves moved (an amount change alone is already shown as "Amount").
-  const hb = entryHeads(before, m);
-  const ha = entryHeads(after, m);
-  if (hb && ha && hb !== ha) rows.push({ label: "Accounting entry", from: hb, to: ha });
   return rows;
 }
 

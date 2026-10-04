@@ -90,7 +90,9 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/tra
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{t.merchant || t.description || counter}</p>
                     <p className="truncate text-xs text-ink-3">
-                      {TXN_TYPE_LABELS[t.type as TxnType]} · {account} {out ? "→" : "←"} {counter}
+                      {TXN_TYPE_LABELS[t.type as TxnType]} · {account}
+                      {/* Opening balances and adjustments have no real "other side" worth showing. */}
+                      {!t.counter_system_head && ` ${out ? "→" : "←"} ${counter}`}
                       {t.source === "csv" && " · imported"}
                     </p>
                   </div>
