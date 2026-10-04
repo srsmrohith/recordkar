@@ -96,8 +96,8 @@ export default async function EditLogPage({ searchParams }: PageProps<"/transact
                   >
                     {ACTION_LABELS[entry.action]}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium">{item.title}</span>
-                  <time dateTime={entry.changed_at} className="text-xs text-ink-3">{formatDateTime(entry.changed_at)}</time>
+                  <span className="min-w-0 flex-1 break-words text-sm font-medium">{item.title}</span>
+                  <time dateTime={entry.changed_at} className="w-full text-xs text-ink-3 sm:w-auto">{formatDateTime(entry.changed_at)}</time>
                 </div>
                 {entry.action !== "update" && sources.get(entry.entity_id) && (
                   <p className="text-xs text-ink-2">{sources.get(entry.entity_id)}</p>
