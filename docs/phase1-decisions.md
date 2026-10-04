@@ -75,4 +75,10 @@ They fill gaps in `recordkar-requirements.md` and `rupevo-original-requirements.
 - **Master data** (expense categories, income heads, events) replaces the earlier "Settings" page; `/settings`
   redirects to `/master-data` with a temporary (307) redirect so the name stays free.
 - **Settings** is reserved for future preferences — alerts, backup & restore, plan, profile — and is not built yet.
-- Mobile navigation: pending decision (plan proposed 2026-10-04, not yet built).
+- **Below 1024px** (phones and tablets) a bottom tab bar replaces the top menu: Home · Transactions · raised **+** ·
+  Queue (count badge) · More. The **+** opens a sheet with "Add transaction" and "Import file", so importing is
+  at most two taps from any screen. **More** holds Accounts, Import, Master data and Sign out (Settings joins it
+  when built). Accounts also stays one tap away through "Manage" on the Dashboard's Accounts card.
+- **From 1024px up**, the top menu is shown; the signed-in email appears next to Sign out from 1280px.
+- Phone layout: smaller Dashboard headline numbers; the "Last 4 months" table drops its bar column; the Queue's
+  bulk-action toolbar collapses to "N selected · Actions ▾".

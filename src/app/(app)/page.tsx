@@ -72,12 +72,12 @@ export default async function DashboardPage() {
       <section className="grid gap-3 sm:grid-cols-[2fr_1fr]">
         <div className="card">
           <p className="text-xs font-medium text-ink-2">Net worth</p>
-          <p className="mt-1 text-5xl font-semibold tracking-tight">{inrWhole(netWorth)}</p>
+          <p className="mt-1 break-words text-4xl font-semibold tracking-tight sm:text-5xl">{inrWhole(netWorth)}</p>
           <p className="mt-2 text-xs text-ink-3">What you own minus what you owe, across your accounts.</p>
         </div>
         <div className="card">
           <p className="text-xs font-medium text-ink-2">Surplus · {monthLabel(thisMonth, "long")}</p>
-          <p className="mt-1 text-3xl font-semibold">
+          <p className="mt-1 text-2xl font-semibold sm:text-3xl">
             {surplus < 0 ? "−" : ""}
             {inrWhole(Math.abs(surplus))}
           </p>
@@ -112,7 +112,7 @@ export default async function DashboardPage() {
       <section className="card">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold">Accounts</h2>
-          <Link href="/accounts" className="text-xs text-brand">Manage</Link>
+          <Link href="/accounts" className="-m-2 p-2 text-xs font-medium text-brand">Manage</Link>
         </div>
         <ul className="divide-y divide-border">
           {accounts.map((a) => (
@@ -157,7 +157,7 @@ function MonthsSummary({ months }: { months: Month[] }) {
               <th className="px-2 py-1.5 text-right font-medium">Income</th>
               <th className="px-2 py-1.5 text-right font-medium">Expenses</th>
               <th className="px-2 py-1.5 text-right font-medium">Surplus</th>
-              <th className="w-1/4 min-w-24 py-1.5 pl-2 font-medium">
+              <th className="hidden w-1/4 min-w-24 py-1.5 pl-2 font-medium sm:table-cell">
                 <span className="sr-only">Surplus bar</span>
               </th>
             </tr>
@@ -175,7 +175,7 @@ function MonthsSummary({ months }: { months: Month[] }) {
                     {m.hasData ? `${s < 0 ? "−" : ""}${inr(Math.abs(s))}` : <NoData />}
                   </td>
                   <td
-                    className="py-2 pl-2"
+                    className="hidden py-2 pl-2 sm:table-cell"
                     title={m.hasData ? `${monthLabel(m.month, "long")}: ${s < 0 ? "deficit" : "surplus"} ${inr(Math.abs(s))}` : "No transactions yet"}
                   >
                     <div className="relative h-3" aria-hidden="true">

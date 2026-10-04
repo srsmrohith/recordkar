@@ -48,6 +48,7 @@ export function QueueList({ items, master }: { items: QueueItem[]; master: Maste
   const [drafts, setDrafts] = useState(() => new Map(items.map((i) => [i.id, i.draft])));
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [message, setMessage] = useState<string | null>(null);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   // Pick up server changes (after approve/bulk edits) when the item list is refreshed.
@@ -87,16 +88,33 @@ export function QueueList({ items, master }: { items: QueueItem[]; master: Maste
   return (
     <div className="space-y-3">
       <div className="sticky top-[57px] z-10 -mx-1 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 shadow-sm">
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={allSelected}
-            onChange={(e) => setSelected(e.target.checked ? new Set(items.map((i) => i.id)) : new Set())}
-          />
-          {selected.size > 0 ? `${selected.size} selected` : "Select all"}
-        </label>
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={(e) => setSelected(e.target.checked ? new Set(items.map((i) => i.id)) : new Set())}
+            />
+            {selected.size > 0 ? `${selected.size} selected` : "Select all"}
+          </label>
+          {/* Phones: actions collapse behind one button so the sticky bar stays one line. */}
+          {selected.size > 0 && (
+            <button
+              type="button"
+              className="btn-secondary ml-auto py-1.5 sm:hidden"
+              aria-expanded={actionsOpen}
+              aria-controls="queue-bulk-actions"
+              onClick={() => setActionsOpen(!actionsOpen)}
+            >
+              Actions {actionsOpen ? "▴" : "▾"}
+            </button>
+          )}
+        </div>
         {selected.size > 0 && (
-          <>
+          <div
+            id="queue-bulk-actions"
+            className={`${actionsOpen ? "flex" : "hidden"} w-full flex-col items-stretch gap-2 sm:flex sm:w-auto sm:flex-row sm:flex-wrap sm:items-center`}
+          >
             <BulkClassify
               master={master}
               disabled={pending}
@@ -120,7 +138,7 @@ export function QueueList({ items, master }: { items: QueueItem[]; master: Maste
             <button className="btn-ghost" disabled={pending} onClick={() => run(() => discardQueueItems([...selected]).then(() => "Discarded."))}>
               Discard selected
             </button>
-          </>
+          </div>
         )}
         {message && <p className="w-full text-xs text-ink-2" role="status">{message}</p>}
       </div>
@@ -147,7 +165,7 @@ function BulkClassify({ master, disabled, onApply }: { master: MasterData; disab
   const [counter, setCounter] = useState("");
   const kinds = allowedCounterKinds(type);
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-1.5 [&>select]:flex-1 sm:[&>select]:flex-none">
       <label className="sr-only" htmlFor="bulk-type">Type for selected</label>
       <select id="bulk-type" className="input w-auto py-1.5" value={type} onChange={(e) => { setType(e.target.value as UserTxnType); setCounter(""); }}>
         {TXN_TYPES.map((t) => <option key={t} value={t}>{TXN_TYPE_LABELS[t]}</option>)}

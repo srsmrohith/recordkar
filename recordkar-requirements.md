@@ -121,6 +121,7 @@ Order of information, top to bottom:
 - **Edit log** (stored in the audit_history table) lives inside Transactions as a tab ("All transactions" / "Edit log"), plus a "View edit log" link on each transaction. It is not a top-level menu item.
 - **Master data** holds the lists transactions are classified with: expense categories, income heads, events (People and Groups join in Phase 2). The old `/settings` route redirects to it.
 - **Settings** is reserved for future user preferences — alerts, backup & restore, plan, profile — and is not built yet.
+- **Phones and tablets (below 1024px):** bottom tab bar — Home · Transactions · raised **+** · Queue (count) · More. The **+** offers "Add transaction" and "Import file" (import is the main way data comes in, so it is never more than two taps away). **More** holds Accounts, Import, Master data and Sign out; Accounts is also one tap away via "Manage" on the Dashboard. The top menu appears from 1024px up.
 
 ---
 
