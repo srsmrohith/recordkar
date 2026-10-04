@@ -162,13 +162,13 @@ function MonthsSummary({ months }: { months: Month[] }) {
     <section className="card">
       <h2 className="mb-2 text-sm font-semibold">Last 4 months</h2>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-xs sm:text-sm">
           <thead className="text-left text-xs text-ink-3">
             <tr>
-              <th className="py-1.5 pr-2 font-medium">Month</th>
-              <th className="px-2 py-1.5 text-right font-medium">Income</th>
-              <th className="px-2 py-1.5 text-right font-medium">Expenses</th>
-              <th className="px-2 py-1.5 text-right font-medium">Surplus</th>
+              <th className="py-1.5 pr-1 font-medium sm:pr-2">Month</th>
+              <th className="px-1 py-1.5 text-right font-medium sm:px-2">Income</th>
+              <th className="px-1 py-1.5 text-right font-medium sm:px-2">Expenses</th>
+              <th className="px-1 py-1.5 text-right font-medium sm:px-2">Surplus</th>
               <th className="hidden w-1/4 min-w-24 py-1.5 pl-2 font-medium sm:table-cell">
                 <span className="sr-only">Surplus bar</span>
               </th>
@@ -180,10 +180,10 @@ function MonthsSummary({ months }: { months: Month[] }) {
               const width = `${(Math.abs(s) / scale) * 50}%`;
               return (
                 <tr key={m.month} className="border-t border-border">
-                  <td className="py-2 pr-2">{monthLabel(m.month)}</td>
-                  <td className="px-2 py-2 text-right">{m.hasData ? inr(m.income) : <NoData />}</td>
-                  <td className="px-2 py-2 text-right">{m.hasData ? inr(m.expense) : <NoData />}</td>
-                  <td className="px-2 py-2 text-right font-medium">
+                  <td className="whitespace-nowrap py-2 pr-1 sm:pr-2">{monthLabel(m.month)}</td>
+                  <td className="whitespace-nowrap px-1 py-2 text-right sm:px-2">{m.hasData ? inr(m.income) : <NoData />}</td>
+                  <td className="whitespace-nowrap px-1 py-2 text-right sm:px-2">{m.hasData ? inr(m.expense) : <NoData />}</td>
+                  <td className="whitespace-nowrap px-1 py-2 text-right font-medium sm:px-2">
                     {m.hasData ? `${s < 0 ? "−" : ""}${inr(Math.abs(s))}` : <NoData />}
                   </td>
                   <td
