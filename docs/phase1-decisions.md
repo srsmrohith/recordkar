@@ -76,6 +76,18 @@ They fill gaps in `recordkar-requirements.md` and `rupevo-original-requirements.
 - Duplicates are **flagged, never auto-dropped**: same account + same Reference is skipped automatically (count shown);
   fuzzy matches (same account, exact amount, date ±2 days, similar description) are flagged with Keep/Discard.
   Manual entry shows the same warning before posting.
+- The reference check also uses the account text exactly as written in the file, so a row whose account isn't
+  recognised (e.g. "HDFC Bnk") is still skipped if the same file is uploaded again. Rows from discarded Queue
+  items don't count, so a discarded row can come back on a later upload.
+- Saving a Queue card (e.g. fixing its account) re-runs the reference and fuzzy duplicate checks; a new match
+  must be answered (Keep/Discard) before approval, while an earlier "Keep" stands for an unchanged match.
+- Uploading a file imported before (same file name or identical rows) asks "This file was imported on <date>.
+  Import again?" first.
+- The import summary counts every queued row that can't be approved yet (missing details — the same rules as the
+  Approve button — and/or a possible duplicate), and words skips by reason: "repeated earlier in this file" vs
+  "already recorded".
+- Queue cards start with "More details" collapsed behind a one-line summary (opened only when a field inside needs
+  fixing), and the Queue keeps its scroll position after bulk and card actions.
 - Wording: "Import" is the menu item; buttons and headings say "Import file". The Import page's steps are
   "1. Download the template" and "2. Upload your completed file".
 
