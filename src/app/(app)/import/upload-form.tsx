@@ -10,12 +10,12 @@ export function UploadForm() {
   return (
     <div className="space-y-3">
       <form action={action} className="card space-y-3">
-        <h2 className="text-sm font-semibold">Upload completed template</h2>
+        <h2 className="text-sm font-semibold">2. Upload your completed file</h2>
         <div>
           <label htmlFor="file" className="label">CSV file</label>
           <input id="file" name="file" type="file" accept=".csv,text/csv" required className="input file:mr-3 file:rounded file:border-0 file:bg-surface-2 file:px-2 file:py-1 file:text-sm" />
         </div>
-        <button className="btn-primary" disabled={pending}>{pending ? "Checking…" : "Upload & check"}</button>
+        <button className="btn-primary" disabled={pending}>{pending ? "Checking…" : "Import file"}</button>
         {state.status === "error" && <p className="field-error" role="alert">{state.error}</p>}
       </form>
 

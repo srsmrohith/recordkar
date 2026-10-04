@@ -67,7 +67,7 @@ export default async function QueuePage() {
               : "Imported transactions awaiting review appear here."}
           </p>
         </div>
-        <Link href="/import" className="btn-secondary">Import CSV</Link>
+        <Link href="/import" className="btn-secondary">Import file</Link>
       </div>
 
       {items.length === 0 ? (

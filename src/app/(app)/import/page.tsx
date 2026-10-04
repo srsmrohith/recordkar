@@ -6,7 +6,7 @@ import { formatDate } from "@/lib/format";
 import { requireUser } from "@/lib/supabase/server";
 import { UploadForm } from "./upload-form";
 
-export const metadata: Metadata = { title: "Import" };
+export const metadata: Metadata = { title: "Import file" };
 
 export default async function ImportPage() {
   const { supabase } = await requireUser();
@@ -26,10 +26,10 @@ export default async function ImportPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Import</h1>
+      <h1 className="text-xl font-semibold">Import file</h1>
 
       <section className="card space-y-2 text-sm">
-        <h2 className="font-semibold">1. Download the template</h2>
+        <h2 className="text-sm font-semibold">1. Download the template</h2>
         <p className="text-ink-2">
           Fill one row per transaction and save as CSV. Required: {REQUIRED_COLUMNS.join(", ")}. Dates as YYYY-MM-DD or
           DD/MM/YYYY. Amounts are always positive; Debit/Credit gives the direction (Debit = money out or card charge).
