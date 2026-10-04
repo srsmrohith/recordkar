@@ -153,7 +153,10 @@ export function QueueList({ items, master }: { items: QueueItem[]; master: Maste
           onSelect={(on) => toggle(item.id, on)}
           onSelectSimilar={() => selectSimilar(item.id)}
           onChange={(d) => setDrafts((m) => new Map(m).set(item.id, d))}
-          onDone={() => router.refresh()}
+          onDone={(msg) => {
+            if (msg) setMessage(msg);
+            router.refresh();
+          }}
         />
       ))}
     </div>
@@ -211,7 +214,7 @@ function QueueCard({
   onSelect: (on: boolean) => void;
   onSelectSimilar: () => void;
   onChange: (d: TxnDraft) => void;
-  onDone: () => void;
+  onDone: (message?: string) => void;
 }) {
   const issues = useMemo(() => validateDraft(draft, master), [draft, master]);
   const [error, setError] = useState<string | null>(null);
@@ -239,13 +242,13 @@ function QueueCard({
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
   const ready = !hasIssues(issues) && !item.duplicate;
-  const act = (fn: () => Promise<{ ok: boolean; error?: string } | void>) =>
+  const act = (fn: () => Promise<{ ok: boolean; error?: string } | void>, successMessage?: string) =>
     startTransition(async () => {
       if (timer.current) clearTimeout(timer.current);
       try {
         const r = await fn();
         if (r && !r.ok) setError(r.error ?? "Something went wrong.");
-        else onDone();
+        else onDone(successMessage);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Something went wrong.");
       }
@@ -278,7 +281,7 @@ function QueueCard({
           {[item.duplicate.merchant, item.duplicate.description].filter(Boolean).join(" · ") || "no description"}.
           <div className="mt-2 flex gap-2">
             <button className="btn-secondary" disabled={pending} onClick={() => act(() => keepDespiteDuplicate(item.id))}>Keep — it&apos;s different</button>
-            <button className="btn-ghost" disabled={pending} onClick={() => act(() => discardQueueItems([item.id]))}>Discard as duplicate</button>
+            <button className="btn-ghost" disabled={pending} onClick={() => act(() => discardQueueItems([item.id]), "Discarded")}>Discard as duplicate</button>
           </div>
         </div>
       )}
@@ -298,10 +301,10 @@ function QueueCard({
       {error && <p className="field-error" role="alert">{error}</p>}
 
       <footer className="flex flex-wrap items-center gap-2">
-        <button className="btn-primary" disabled={!ready || pending} onClick={() => act(() => approveQueueItem(item.id, draft))}>
+        <button className="btn-primary" disabled={!ready || pending} onClick={() => act(() => approveQueueItem(item.id, draft), "Posted")}>
           {pending ? "Posting…" : "Approve & post"}
         </button>
-        <button className="btn-ghost" disabled={pending} onClick={() => act(() => discardQueueItems([item.id]))}>Discard</button>
+        <button className="btn-ghost" disabled={pending} onClick={() => act(() => discardQueueItems([item.id]), "Discarded")}>Discard</button>
         <button className="btn-ghost text-xs" onClick={onSelectSimilar}>Select similar</button>
         <span className="ml-auto text-xs text-ink-3" aria-live="polite">
           {saveState === "saving" ? "Saving…" : saveState === "error" ? "Not saved" : ""}

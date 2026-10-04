@@ -39,14 +39,14 @@ export function TransactionForm({ master, initial, transactionId, fieldsMode = "
     startTransition(async () => {
       const r = editing ? await updateTransaction(transactionId!, draft) : await postManualTransaction(draft, allowDuplicate);
       setResult(r);
-      if (r.ok) router.push("/transactions");
+      if (r.ok) router.push(`/transactions?notice=${editing ? "saved" : "posted"}`);
     });
   }
 
   function remove() {
     startTransition(async () => {
       const r = await deleteTransaction(transactionId!);
-      if (r.ok) router.push("/transactions");
+      if (r.ok) router.push("/transactions?notice=deleted");
       else setResult({ ok: false, error: r.error ?? "Couldn't delete." });
     });
   }

@@ -60,6 +60,9 @@ export function AccountForm() {
         later.
       </p>
       {state.error && <p className="field-error" role="alert">{state.error}</p>}
+      {state.ok && (
+        <p className="text-sm font-medium text-brand" role="status">✓ Account added</p>
+      )}
       <button className="btn-primary" disabled={pending}>{pending ? "Adding…" : "Add account"}</button>
     </form>
   );

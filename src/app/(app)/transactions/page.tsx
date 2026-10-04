@@ -6,6 +6,7 @@ import type { TxnType } from "@/lib/engine/types";
 import { formatDate, inr, monthLabel, monthStart, todayIso, TXN_TYPE_LABELS } from "@/lib/format";
 import { requireUser } from "@/lib/supabase/server";
 import { TransactionsTabs } from "./tabs";
+import { isNoticeKind, Notice } from "@/components/notice";
 
 export const metadata: Metadata = { title: "Transactions" };
 
@@ -13,6 +14,7 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/tra
   const sp = await searchParams;
   const month = typeof sp.month === "string" && /^\d{4}-\d{2}$/.test(sp.month) ? `${sp.month}-01` : monthStart(todayIso());
   const accountFilter = typeof sp.account === "string" ? sp.account : "";
+  const notice = isNoticeKind(sp.notice) ? sp.notice : null;
 
   const { supabase } = await requireUser();
   const master = await loadMaster(supabase);
@@ -36,6 +38,7 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/tra
         <h1 className="text-xl font-semibold">Transactions</h1>
         <Link href="/transactions/new" className="btn-primary">+ Add transaction</Link>
       </div>
+      {notice && <Notice kind={notice} />}
       <TransactionsTabs active="list" />
 
       <div className="flex flex-wrap items-center gap-2">
