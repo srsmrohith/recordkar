@@ -114,11 +114,13 @@ Order of information, top to bottom:
 5. People — net due to/from, aggregated per §5
 6. Current month + previous 3 months (per original §16), kept to a minimal visual, not a full chart
 
-**Dashboard details (decided in Phase 1):** a prominent "Add transaction" button at the top. Headline numbers (Net worth, this month's surplus) show whole rupees; transaction lists and entries keep paise. Months before the user's first transaction show "—" in the last-4-months table, not ₹0.00.
+**Dashboard details (decided in Phase 1):** a prominent "Add transaction" button at the top from 1024px up (on phones and tablets the raised **+** covers it). Net worth and Net balance always include archived accounts; an account can only be archived at a ₹0 balance, so money never silently drops out. Headline numbers (Net worth, this month's surplus) show whole rupees; transaction lists and entries keep paise. Months before the user's first transaction show "—" in the last-4-months table, not ₹0.00.
 
 **Navigation (decided in Phase 1):**
 - **Queue** menu item shows the pending count, e.g. "Queue (12)".
-- **Edit log** (stored in the audit_history table) lives inside Transactions as a tab ("All transactions" / "Edit log"), plus a "View edit log" link on each transaction. It is not a top-level menu item.
+- **Edit log** (stored in the audit_history table) lives inside Transactions as a tab ("All transactions" / "Edit log"), plus a "View edit log" link on each transaction. It is not a top-level menu item. It uses plain wording — no accounting jargon; Dr/Cr appears only in the treatment preview — and shows "Imported from <file name> on <date>" for transactions approved from the Queue.
+- **Import wording:** "Import" is the menu item; buttons and headings say "Import file".
+- **Accounts:** each account shows its opening balance and "Balance as of" date, editable through the same engine and Edit log.
 - **Master data** holds the lists transactions are classified with: expense categories, income heads, events (People and Groups join in Phase 2). The old `/settings` route redirects to it.
 - **Settings** is reserved for future user preferences — alerts, backup & restore, plan, profile — and is not built yet.
 - **Phones and tablets (below 1024px):** bottom tab bar — Home · Transactions · raised **+** · Queue (count) · More. The **+** offers "Add transaction" and "Import file" (import is the main way data comes in, so it is never more than two taps away). **More** holds Accounts, Import, Master data and Sign out; Accounts is also one tap away via "Manage" on the Dashboard. The top menu appears from 1024px up.

@@ -40,17 +40,33 @@ They fill gaps in `recordkar-requirements.md` and `rupevo-original-requirements.
 - Account types in Phase 1: Bank, Cash, Credit card, Wallet (Wallet counts like Bank/Cash in Net Balance).
 - New users get editable default expense categories and income heads (seeded on sign-up).
 - Events are a Phase 1 tag master. Person/Group values from CSV are kept as raw text on the Queue item and mapped in Phase 2.
+- **Archiving an account** is only allowed when its balance (or card outstanding) is exactly ₹0; otherwise the user
+  is told to "Move or adjust the remaining ₹X first". Archiving asks for confirmation. Archived accounts keep their
+  history, and Net worth / Net balance always include them, so money never silently drops out of the totals.
+- **Opening balance:** the account form asks for the balance and a "Balance as of" date (default today; hint: the
+  day before the earliest transaction you plan to import). The Accounts page shows each account's opening balance
+  and date with Edit (or Add if there is none, one per account). Edits use the normal transaction form, so they go
+  through the same engine, Dr = Cr check and Edit log; the account can't be changed on an opening balance.
 
 ## Edits
 - Posted transactions can be edited or deleted. Edits go back through Review & Post; every change is recorded in the
   **Edit log (stored in the audit_history table)** with before/after snapshots.
 - The Edit log shows, per edit, one row per changed field with a friendly label and old → new value
   (e.g. "Amount: ₹480 → ₹520"), computed by comparing the stored snapshots. Technical fields (ids, timestamps,
-  source) are ignored; debit/credit line changes are summarised as one "Accounting entry" row when the heads change.
-  Posted entries show their key fields; deleted entries show what was removed (date, account, amount, category,
-  merchant) and stay in the log. Times are India time. Amounts in the Edit log keep paise (e.g. "₹480.00 → ₹520.00").
-  Reached from each transaction ("View edit log") and from the Edit log tab inside Transactions
-  (`/transactions/edit-log`); it is not in the main menu.
+  source) are ignored. Posted entries show their key fields; deleted entries show what was removed (date, account,
+  amount, category, merchant) and stay in the log. Times are India time. Amounts in the Edit log keep paise
+  (e.g. "₹480.00 → ₹520.00"), and each label sits in its own column. Reached from each transaction
+  ("View edit log") and from the Edit log tab inside Transactions (`/transactions/edit-log`); not in the main menu.
+- **No accounting jargon in user-facing text; Dr/Cr appears only in the treatment preview.** In the Edit log,
+  debit/credit line changes are described by the plain field rows (Type, Account, Category, Amount, Money in/out);
+  direction reads "Money in/out" (Money out / Money in); opening balances and adjustments read "Recorded as:
+  Starting balance" / "Balance correction". The Other type's counter field is "Linked to".
+- For transactions approved from the Queue, Posted and Deleted entries show "Imported from <file name> on <date>".
+  The link comes from the Queue item's approval record in the audit_history table, so it survives deletion.
+- After posting, saving or deleting, a short confirmation shows ("Posted", "Saved", "Deleted"); Queue cards
+  confirm "Posted"/"Discarded" and adding an account confirms "Account added".
+- The transaction form shows Debit/Credit only after a type is chosen, and only for types that don't imply it
+  (Adjustment, Other). Queue cards always show it as statement evidence.
 
 ## Queue and import
 - Phase 1 includes a basic **CSV** upload of the Rupevo template columns. Excel template, bank-statement parsing
@@ -60,11 +76,14 @@ They fill gaps in `recordkar-requirements.md` and `rupevo-original-requirements.
 - Duplicates are **flagged, never auto-dropped**: same account + same Reference is skipped automatically (count shown);
   fuzzy matches (same account, exact amount, date ±2 days, similar description) are flagged with Keep/Discard.
   Manual entry shows the same warning before posting.
+- Wording: "Import" is the menu item; buttons and headings say "Import file". The Import page's steps are
+  "1. Download the template" and "2. Upload your completed file".
 
 ## Dashboard
 - Budgets (section 3) and People (section 5) are hidden until Phase 2.
 - The EMI principal line (open decision #3) does not appear in Phase 1 because there are no loans yet.
-- A prominent "Add transaction" button sits at the top of the Dashboard.
+- A prominent "Add transaction" button sits at the top of the Dashboard from 1024px up; below that the raised **+**
+  in the bottom bar covers it.
 - Headline numbers (Net worth, this month's surplus) show whole rupees; transaction lists and entries keep paise.
 - In the "Last 4 months" table, months before the first transaction show "—" instead of ₹0.00.
 
@@ -82,3 +101,6 @@ They fill gaps in `recordkar-requirements.md` and `rupevo-original-requirements.
 - **From 1024px up**, the top menu is shown; the signed-in email appears next to Sign out from 1280px.
 - Phone layout: smaller Dashboard headline numbers; the "Last 4 months" table drops its bar column; the Queue's
   bulk-action toolbar collapses to "N selected · Actions ▾".
+- Phone layout (380px): transaction rows let the category wrap to a second line; "Last 4 months" keeps "Oct 2026"
+  on one line; Edit log titles wrap with the timestamp on its own line; Import history shows as cards so Rows,
+  Queued and Skipped stay visible.
