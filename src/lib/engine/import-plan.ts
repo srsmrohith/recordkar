@@ -1,7 +1,7 @@
 // Pure import planning: which uploaded rows are skipped, which are flagged as possible duplicates,
 // and what the import summary says. The import action supplies what's already recorded.
 import { findFuzzyDuplicate, type DuplicateCandidate } from "./duplicates";
-import type { Issues } from "./treatment";
+import { hasIssues, validateDraft, type Issues } from "./treatment";
 import type { MasterData, TxnDraft } from "./types";
 
 const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
@@ -30,6 +30,7 @@ export type PlanInput = {
 export type RowPlan = {
   skip: boolean;
   duplicate: DuplicateCandidate | null;
+  /** Missing, blank or unrecognised required details — the same rules the Approve button uses. */
   needsInfo: boolean;
 };
 
@@ -39,6 +40,9 @@ export type ImportSummary = {
   skipped: number;
   needsInfo: number;
   flagged: number;
+  /** Queued rows that can't be approved yet: missing details and/or a possible duplicate. */
+  notReady: number;
+  ready: number;
 };
 
 export function planImport(
@@ -46,7 +50,7 @@ export function planImport(
   ctx: { recordedKeys: Set<string>; candidates: DuplicateCandidate[]; master: MasterData },
 ): { plans: RowPlan[]; summary: ImportSummary } {
   const seen = new Set(ctx.recordedKeys);
-  const summary: ImportSummary = { total: rows.length, queued: 0, skipped: 0, needsInfo: 0, flagged: 0 };
+  const summary: ImportSummary = { total: rows.length, queued: 0, skipped: 0, needsInfo: 0, flagged: 0, notReady: 0, ready: 0 };
 
   const plans = rows.map((row): RowPlan => {
     const keys = referenceKeys(row.draft.accountId, row.rawAccount, row.draft.reference);
@@ -58,10 +62,14 @@ export function planImport(
     }
 
     const duplicate = findFuzzyDuplicate(row.draft, ctx.candidates);
-    const needsInfo = Object.keys(row.issues).length > 0;
+    // Count every row that can't be approved yet, not just ones whose file values had problems:
+    // blank required fields (e.g. no category) count too.
+    const needsInfo = Object.keys(row.issues).length > 0 || hasIssues(validateDraft(row.draft, ctx.master));
     summary.queued++;
     if (needsInfo) summary.needsInfo++;
     if (duplicate) summary.flagged++;
+    if (needsInfo || duplicate) summary.notReady++;
+    else summary.ready++;
     return { skip: false, duplicate, needsInfo };
   });
 

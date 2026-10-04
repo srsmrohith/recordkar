@@ -63,9 +63,21 @@ export function UploadForm() {
         <div className="card space-y-2 text-sm" role="status">
           <p className="font-medium">{state.fileName}: {state.total} row{state.total === 1 ? "" : "s"} read</p>
           <ul className="space-y-0.5 text-ink-2">
-            <li>{state.queued} sent to the Queue for review</li>
-            {state.needsInfo > 0 && <li>{state.needsInfo} need missing details filled in</li>}
-            {state.flagged > 0 && <li>⚠ {state.flagged} flagged as possible duplicates</li>}
+            <li>
+              {state.queued} sent to the Queue for review
+              {state.queued > 0 && ` — ${state.ready} ready to approve`}
+            </li>
+            {state.notReady > 0 && (
+              <li>
+                {state.notReady} can&apos;t be approved yet:{" "}
+                {[
+                  state.needsInfo > 0 && `${state.needsInfo} need missing details`,
+                  state.flagged > 0 && `⚠ ${state.flagged} flagged as possible duplicate${state.flagged === 1 ? "" : "s"}`,
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
+              </li>
+            )}
             {state.skipped > 0 && <li>{state.skipped} skipped — same account and reference already recorded</li>}
           </ul>
           {state.queued > 0 && <Link href="/queue" className="btn-primary">Review in Queue</Link>}

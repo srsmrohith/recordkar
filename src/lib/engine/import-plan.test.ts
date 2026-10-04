@@ -24,6 +24,31 @@ const draft = (over: Partial<TxnDraft>): TxnDraft => ({
 
 const ctx = (recorded: string[] = []) => ({ recordedKeys: new Set(recorded), candidates: [], master });
 
+describe("problem 2: count every row that can't be approved yet", () => {
+  it("counts blank required fields (no category), not only problems with file values", () => {
+    const rows = [
+      // Misspelled account (an import issue).
+      { draft: draft({ accountId: null, reference: "R1" }), issues: { account: "No account named" }, rawAccount: "HDFC Bnak" },
+      // Blank category: no import issue, but it can't be approved — this used to be missed.
+      { draft: draft({ counter: null, reference: "R2" }), issues: {}, rawAccount: "HDFC Bank" },
+      { draft: draft({ counter: null, reference: "R3" }), issues: {}, rawAccount: "HDFC Bank" },
+      // Complete row.
+      { draft: draft({ reference: "R4" }), issues: {}, rawAccount: "HDFC Bank" },
+    ];
+    expect(planImport(rows, ctx()).summary).toMatchObject({ queued: 4, needsInfo: 3, flagged: 0, notReady: 3, ready: 1 });
+  });
+
+  it("counts a flagged duplicate as not ready, and a row both incomplete and flagged once", () => {
+    const candidate = { id: "t1", kind: "transaction" as const, account_id: "bank", amount: 300, txn_date: "2026-10-03", merchant: "Uber", description: null };
+    const rows = [
+      { draft: draft({ reference: "R1" }), issues: {}, rawAccount: "HDFC Bank" },
+      { draft: draft({ counter: null, reference: "R2" }), issues: {}, rawAccount: "HDFC Bank" },
+    ];
+    const { summary } = planImport(rows, { recordedKeys: new Set(), candidates: [candidate], master });
+    expect(summary).toMatchObject({ needsInfo: 1, flagged: 2, notReady: 2, ready: 0 });
+  });
+});
+
 describe("problem 1: duplicates with an unrecognised account", () => {
   it("keys a row by resolved account and by the account text from the file", () => {
     expect(referenceKeys("bank", "HDFC Bank", " REF004 ")).toEqual(["acct:bank|ref004", "raw:hdfc bank|ref004"]);

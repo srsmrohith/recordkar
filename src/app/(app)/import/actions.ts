@@ -5,7 +5,14 @@ import { revalidatePath } from "next/cache";
 import { friendlyDbError, loadMaster } from "@/lib/data";
 import { loadDuplicateCandidates } from "@/lib/duplicates-server";
 import { parseTemplateCsv, resolveRow, type RawRow } from "@/lib/engine/csv";
-import { fileFingerprint, findPreviousImport, planImport, referenceKeys, type PreviousImport } from "@/lib/engine/import-plan";
+import {
+  fileFingerprint,
+  findPreviousImport,
+  planImport,
+  referenceKeys,
+  type ImportSummary,
+  type PreviousImport,
+} from "@/lib/engine/import-plan";
 import { draftToRow } from "@/lib/engine/treatment";
 import { formatDate, isoDateInIndia } from "@/lib/format";
 import { requireUser } from "@/lib/supabase/server";
@@ -14,7 +21,7 @@ export type ImportState =
   | { status: "idle" }
   | { status: "error"; error: string }
   | { status: "confirm"; fileName: string; importedOn: string }
-  | { status: "done"; fileName: string; total: number; queued: number; skipped: number; flagged: number; needsInfo: number };
+  | ({ status: "done"; fileName: string } & ImportSummary);
 
 const MAX_BYTES = 2 * 1024 * 1024;
 
