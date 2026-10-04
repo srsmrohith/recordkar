@@ -67,9 +67,12 @@ export default async function DashboardPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Dashboard</h1>
-        <Link href="/transactions/new" className="btn-primary w-full px-5 py-2.5 text-base sm:w-auto">
-          + Add transaction
-        </Link>
+        {/* Below 1024px the raised + in the bottom bar covers this. */}
+        <div className="hidden lg:block">
+          <Link href="/transactions/new" className="btn-primary px-5 py-2.5 text-base">
+            + Add transaction
+          </Link>
+        </div>
       </div>
 
       {/* 1. Net worth + this month's surplus */}
