@@ -6,7 +6,8 @@ import type { TxnType } from "@/lib/engine/types";
 import { formatDate, inr, monthLabel, monthStart, todayIso, TXN_TYPE_LABELS } from "@/lib/format";
 import { requireUser } from "@/lib/supabase/server";
 import { TransactionsTabs } from "./tabs";
-import { isNoticeKind, Notice } from "@/components/notice";
+import { Notice } from "@/components/notice";
+import { isNoticeKind } from "@/lib/notice";
 
 export const metadata: Metadata = { title: "Transactions" };
 

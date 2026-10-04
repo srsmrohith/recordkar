@@ -1,18 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-const MESSAGES = {
-  posted: "Posted",
-  saved: "Saved",
-  deleted: "Deleted",
-} as const;
-
-export type NoticeKind = keyof typeof MESSAGES;
-
-export function isNoticeKind(value: unknown): value is NoticeKind {
-  return typeof value === "string" && value in MESSAGES;
-}
+import { NOTICE_MESSAGES as MESSAGES, type NoticeKind } from "@/lib/notice";
 
 /**
  * Short confirmation after a redirect (e.g. /transactions?notice=posted). The query parameter is
