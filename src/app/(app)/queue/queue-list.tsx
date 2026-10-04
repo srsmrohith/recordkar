@@ -8,6 +8,7 @@ import { textSimilarity } from "@/lib/engine/duplicates";
 import { allowedCounterKinds, hasIssues, validateDraft, type Issues } from "@/lib/engine/treatment";
 import { TXN_TYPES, type Counter, type MasterData, type TxnDraft, type UserTxnType } from "@/lib/engine/types";
 import { formatDate, inr, TXN_TYPE_LABELS } from "@/lib/format";
+import { preserveScrollAcrossRefresh } from "@/lib/scroll";
 import {
   approveQueueItem,
   bulkApprove,
@@ -72,7 +73,20 @@ export function QueueList({ items, master }: { items: QueueItem[]; master: Maste
     setSelected(new Set(items.filter((i) => isSimilar(base, drafts.get(i.id)!)).map((i) => i.id)));
   }
 
-  const run = (fn: () => Promise<string | null | void>) =>
+  // Bulk and card actions revalidate the page, which can jump to the top; keep the reader's place.
+  const restoreScroll = useRef<(() => void) | null>(null);
+  const rememberScroll = () => {
+    restoreScroll.current = preserveScrollAcrossRefresh();
+  };
+  useEffect(() => {
+    if (!pending && restoreScroll.current) {
+      restoreScroll.current();
+      restoreScroll.current = null;
+    }
+  }, [pending, items]);
+
+  const run = (fn: () => Promise<string | null | void>) => {
+    rememberScroll();
     startTransition(async () => {
       try {
         const msg = await fn();
@@ -82,6 +96,7 @@ export function QueueList({ items, master }: { items: QueueItem[]; master: Maste
       }
       router.refresh();
     });
+  };
 
   const allSelected = selected.size === items.length;
 
@@ -152,6 +167,7 @@ export function QueueList({ items, master }: { items: QueueItem[]; master: Maste
           selected={selected.has(item.id)}
           onSelect={(on) => toggle(item.id, on)}
           onSelectSimilar={() => selectSimilar(item.id)}
+          onBeforeAction={rememberScroll}
           onChange={(d) => setDrafts((m) => new Map(m).set(item.id, d))}
           onDone={(msg) => {
             if (msg) setMessage(msg);
@@ -206,6 +222,7 @@ function QueueCard({
   onSelectSimilar,
   onChange,
   onDone,
+  onBeforeAction,
 }: {
   item: QueueItem;
   draft: TxnDraft;
@@ -215,6 +232,7 @@ function QueueCard({
   onSelectSimilar: () => void;
   onChange: (d: TxnDraft) => void;
   onDone: (message?: string) => void;
+  onBeforeAction: () => void;
 }) {
   const issues = useMemo(() => validateDraft(draft, master), [draft, master]);
   const [error, setError] = useState<string | null>(null);
@@ -242,7 +260,8 @@ function QueueCard({
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
   const ready = !hasIssues(issues) && !item.duplicate;
-  const act = (fn: () => Promise<{ ok: boolean; error?: string } | void>, successMessage?: string) =>
+  const act = (fn: () => Promise<{ ok: boolean; error?: string } | void>, successMessage?: string) => {
+    onBeforeAction();
     startTransition(async () => {
       if (timer.current) clearTimeout(timer.current);
       try {
@@ -253,6 +272,7 @@ function QueueCard({
         setError(e instanceof Error ? e.message : "Something went wrong.");
       }
     });
+  };
 
   return (
     <article className={`card space-y-3 ${selected ? "ring-2 ring-brand/40" : ""}`} aria-label={`Imported transaction ${label(draft) || ""}`}>
