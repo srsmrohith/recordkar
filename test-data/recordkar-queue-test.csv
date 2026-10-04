@@ -1,0 +1,9 @@
+Transaction Date,Value Date,Account,Transaction Type,Amount,Debit/Credit,Category,Description,Merchant,Person,Group,Event,Reference,Notes
+01/10/2026,,HDFC Bnak,EXPENSE,250,DEBIT,Transport,Auto ride,Rapido (Queue test),,,,REF101,Case 1: misspelled account
+02/10/2026,,HDFC Bank,EXPENSE,1200,DEBIT,,Electricity bill,BESCOM (Queue test),,,,REF102,Case 2: missing category
+02/10/2026,,HDFC Bank,EXPENSE,150,DEBIT,Food & Dining,Coffee,Third Wave (Queue test),,,,REF103,Case 3: first copy
+02/10/2026,,HDFC Bank,EXPENSE,150,DEBIT,Food & Dining,Coffee,Third Wave (Queue test),,,,REF103,Case 3: exact duplicate reference
+04/10/2026,,HDFC Bank,EXPENSE,520,DEBIT,Food & Dining,Swiggy order,Swiggy (Queue test),,,,REF104,Case 4: likely duplicate of the 03 Oct Swiggy 520
+01/10/2026,,HDFC Bank,EXPENSE,350,DEBIT,,Dinner,Zomato (Queue test),,,,REF105,Case 5: similar items for bulk approval
+02/10/2026,,HDFC Bank,EXPENSE,420,DEBIT,,Lunch,Zomato (Queue test),,,,REF106,Case 5: similar items for bulk approval
+03/10/2026,,HDFC Bank,EXPENSE,275,DEBIT,,Snacks,Zomato (Queue test),,,,REF107,Case 5: similar items for bulk approval
