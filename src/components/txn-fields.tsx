@@ -110,7 +110,14 @@ export function TxnFields({ draft, onChange, master, issues, showIssues, importI
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label htmlFor={id("account")} className="label">{manualTransfer ? "From account" : "Account"}</label>
-          <select id={id("account")} className={cls("account")} value={draft.accountId ?? ""} onChange={(e) => set({ accountId: e.target.value || null })}>
+          {/* An opening balance belongs to its account; it can't be moved to another one. */}
+          <select
+            id={id("account")}
+            className={cls("account")}
+            value={draft.accountId ?? ""}
+            disabled={isOpening}
+            onChange={(e) => set({ accountId: e.target.value || null })}
+          >
             <option value="">Choose…</option>
             {visible(master.accounts, draft.accountId).map((a) => (
               <option key={a.id} value={a.id}>{a.name}</option>

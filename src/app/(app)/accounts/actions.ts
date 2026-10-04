@@ -12,6 +12,51 @@ export type AccountFormState = { error?: string; ok?: boolean };
 
 const TYPES: AccountType[] = ["bank", "cash", "credit_card", "wallet"];
 
+/** Money held is an inflow to the account; a card's existing outstanding is a charge to it. */
+function openingDraft(accountId: string, type: AccountType, amount: number, asOf: string) {
+  return {
+    ...emptyDraft(),
+    type: "OPENING_BALANCE" as const,
+    direction: type === "credit_card" ? ("DEBIT" as const) : ("CREDIT" as const),
+    txnDate: asOf,
+    amount,
+    accountId,
+    description: "Opening balance",
+  };
+}
+
+/**
+ * Add an opening balance to an account that doesn't have one. Existing opening balances are
+ * edited through the normal transaction form, so they share the engine, Dr = Cr check and Edit log.
+ */
+export async function addOpeningBalance(
+  accountId: string,
+  _: AccountFormState,
+  form: FormData,
+): Promise<AccountFormState> {
+  const amount = Math.round(Number(String(form.get("amount") ?? "").trim()) * 100) / 100;
+  const asOf = String(form.get("asOf") ?? "");
+  if (!Number.isFinite(amount) || amount <= 0) return { error: "Enter an amount more than zero." };
+  if (!isValidIsoDate(asOf)) return { error: "Choose the date the balance is as of." };
+
+  const { supabase } = await requireUser();
+  const [account, existing] = await Promise.all([
+    supabase.from("accounts").select("id, type").eq("id", accountId).maybeSingle(),
+    supabase.from("transactions").select("id").eq("account_id", accountId).eq("type", "OPENING_BALANCE").limit(1),
+  ]);
+  if (account.error || !account.data) return { error: "Account not found." };
+  if (existing.data?.length) return { error: "This account already has an opening balance — edit that one instead." };
+
+  const draft = openingDraft(accountId, account.data.type as AccountType, amount, asOf);
+  const { error } = await supabase.rpc("post_transaction", {
+    p_txn: toTxnPayload(draft, "system"),
+    p_components: buildComponents(draft),
+  });
+  if (error) return { error: friendlyDbError(error) };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 export async function createAccount(_: AccountFormState, form: FormData): Promise<AccountFormState> {
   const name = String(form.get("name") ?? "").trim();
   const type = String(form.get("type") ?? "") as AccountType;
@@ -22,22 +67,13 @@ export async function createAccount(_: AccountFormState, form: FormData): Promis
   if (!TYPES.includes(type)) return { error: "Choose an account type." };
   const opening = openingRaw === "" ? 0 : Math.round(Number(openingRaw) * 100) / 100;
   if (!Number.isFinite(opening) || opening < 0) return { error: "Opening amount must be zero or more." };
-  if (opening > 0 && !isValidIsoDate(asOf)) return { error: "Choose the date the opening amount is as of." };
+  if (opening > 0 && !isValidIsoDate(asOf)) return { error: "Choose the date the balance is as of." };
 
   const id = randomUUID();
   let openingTxn = null;
   let openingComponents = null;
   if (opening > 0) {
-    // Money held is an inflow to the account; a card's existing outstanding is a charge to it.
-    const draft = {
-      ...emptyDraft(),
-      type: "OPENING_BALANCE" as const,
-      direction: type === "credit_card" ? ("DEBIT" as const) : ("CREDIT" as const),
-      txnDate: asOf,
-      amount: opening,
-      accountId: id,
-      description: "Opening balance",
-    };
+    const draft = openingDraft(id, type, opening, asOf);
     openingTxn = toTxnPayload(draft, "system");
     openingComponents = buildComponents(draft);
   }

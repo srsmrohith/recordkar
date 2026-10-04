@@ -37,16 +37,27 @@ export function AccountForm() {
           </select>
         </div>
         <div>
-          <label htmlFor="acct-opening" className="label">{isCard ? "Current outstanding (₹)" : "Current balance (₹)"}</label>
+          <label htmlFor="acct-opening" className="label">{isCard ? "Outstanding on that date (₹)" : "Balance on that date (₹)"}</label>
           <input id="acct-opening" name="opening" type="number" inputMode="decimal" step="0.01" min="0" placeholder="0" className="input tabular" />
         </div>
         <div>
-          <label htmlFor="acct-asof" className="label">As of</label>
-          <input id="acct-asof" name="asOf" type="date" defaultValue={todayIso()} className="input" />
+          <label htmlFor="acct-asof" className="label">Balance as of</label>
+          <input
+            id="acct-asof"
+            name="asOf"
+            type="date"
+            defaultValue={todayIso()}
+            className="input"
+            aria-describedby="acct-asof-hint"
+          />
+          <p id="acct-asof-hint" className="mt-1 text-xs text-ink-3">
+            Choose the day before the earliest transaction you plan to import.
+          </p>
         </div>
       </div>
       <p className="text-xs text-ink-3">
-        Recorded as an Opening Balance entry — not income, and not counted in any month&apos;s surplus.
+        Saved as the account&apos;s opening balance — not income, and not counted in any month&apos;s surplus. You can edit it
+        later.
       </p>
       {state.error && <p className="field-error" role="alert">{state.error}</p>}
       <button className="btn-primary" disabled={pending}>{pending ? "Adding…" : "Add account"}</button>

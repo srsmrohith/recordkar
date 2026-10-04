@@ -34,7 +34,7 @@ export default async function EditTransactionPage({ params }: PageProps<"/transa
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold">Edit transaction</h1>
+        <h1 className="text-xl font-semibold">{draft.type === "OPENING_BALANCE" ? "Edit opening balance" : "Edit transaction"}</h1>
         <Link href={`/transactions/edit-log?transaction=${id}`} className="text-sm text-brand">
           View edit log{log.count ? ` (${log.count})` : ""}
         </Link>
