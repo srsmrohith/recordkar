@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { friendlyDbError } from "@/lib/data";
 import { buildComponents, isValidIsoDate, toTxnPayload } from "@/lib/engine/treatment";
 import { emptyDraft, type AccountType } from "@/lib/engine/types";
+import { inr } from "@/lib/format";
 import { requireUser } from "@/lib/supabase/server";
 
 export type AccountFormState = { error?: string; ok?: boolean };
@@ -52,9 +53,30 @@ export async function createAccount(_: AccountFormState, form: FormData): Promis
   return { ok: true };
 }
 
-export async function setAccountArchived(id: string, archived: boolean) {
+/**
+ * Archive (hide from pickers) or restore an account. Archiving is only allowed at exactly ₹0, so
+ * Net worth and Net balance never silently lose money; history stays intact either way.
+ */
+export async function setAccountArchived(id: string, archived: boolean): Promise<{ ok: boolean; error?: string }> {
   const { supabase } = await requireUser();
+  if (archived) {
+    const { data, error } = await supabase.from("account_balances").select("type, balance").eq("id", id).maybeSingle();
+    if (error) return { ok: false, error: friendlyDbError(error) };
+    if (!data) return { ok: false, error: "Account not found." };
+    const remaining = Number(data.balance);
+    if (Math.round(remaining * 100) !== 0) {
+      const amount = inr(Math.abs(remaining));
+      return {
+        ok: false,
+        error:
+          data.type === "credit_card"
+            ? `This card still has ${amount} outstanding. Pay it off or adjust it to zero first — only accounts at ₹0 can be archived.`
+            : `Move or adjust the remaining ${amount} first — only accounts at ₹0 can be archived.`,
+      };
+    }
+  }
   const { error } = await supabase.from("accounts").update({ archived }).eq("id", id);
-  if (error) throw new Error(friendlyDbError(error));
+  if (error) return { ok: false, error: friendlyDbError(error) };
   revalidatePath("/", "layout");
+  return { ok: true };
 }

@@ -4,7 +4,7 @@ import type { AccountType } from "@/lib/engine/types";
 import { ACCOUNT_TYPE_LABELS, inr } from "@/lib/format";
 import { requireUser } from "@/lib/supabase/server";
 import { AccountForm } from "./account-form";
-import { setAccountArchived } from "./actions";
+import { ArchiveButton } from "./archive-button";
 
 export const metadata: Metadata = { title: "Accounts" };
 
@@ -56,9 +56,7 @@ function AccountRow({ account: a }: { account: { id: string; name: string; type:
         <p className="text-sm font-medium tabular">{inr(a.balance)}</p>
         <p className="text-xs text-ink-3">{isCard ? "outstanding" : "balance"}</p>
       </div>
-      <form action={setAccountArchived.bind(null, a.id, !a.archived)}>
-        <button className="btn-ghost text-xs">{a.archived ? "Restore" : "Archive"}</button>
-      </form>
+      <ArchiveButton id={a.id} name={a.name} archived={a.archived} balance={Number(a.balance)} isCard={isCard} />
     </li>
   );
 }

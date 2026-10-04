@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
-type Balance = { id: string; name: string; type: AccountType; balance: number };
+type Balance = { id: string; name: string; type: AccountType; balance: number; archived: boolean };
 type Month = { month: string; hasData: boolean; income: number; expense: number; adjustments: number };
 
 export default async function DashboardPage() {
@@ -15,14 +15,18 @@ export default async function DashboardPage() {
   const firstMonth = monthStart(thisMonth, -3);
 
   const [balances, summary, queue, firstTxn] = await Promise.all([
-    supabase.from("account_balances").select("id, name, type, balance").eq("archived", false).order("name"),
+    // All accounts, archived included: totals must never silently lose money.
+    supabase.from("account_balances").select("id, name, type, balance, archived").order("name"),
     supabase.from("monthly_summary").select("month, income, expense, adjustments").gte("month", firstMonth),
     supabase.from("transaction_queue").select("amount").eq("status", "pending"),
     supabase.from("transactions").select("txn_date").order("txn_date").limit(1),
   ]);
   for (const r of [balances, summary, queue, firstTxn]) if (r.error) throw new Error(r.error.message);
 
-  const accounts = (balances.data as Balance[]).map((a) => ({ ...a, balance: Number(a.balance) }));
+  const allAccounts = (balances.data as Balance[]).map((a) => ({ ...a, balance: Number(a.balance) }));
+  const accounts = allAccounts.filter((a) => !a.archived);
+  // Archiving requires ₹0, but an old transaction could be edited afterwards; show any such money explicitly.
+  const archivedWithMoney = allAccounts.filter((a) => a.archived && Math.round(a.balance * 100) !== 0);
   // Months before the first transaction show a dash rather than ₹0.00.
   const firstTxnMonth = firstTxn.data![0] ? monthStart(firstTxn.data![0].txn_date) : null;
   const months: Month[] = [0, -1, -2, -3].map((delta) => {
@@ -39,8 +43,8 @@ export default async function DashboardPage() {
 
   // §4: Net balance = Bank + Cash (+ Wallet) − credit card outstanding. Phase 1 has no investments,
   // loans or receivables, so Net worth (assets − liabilities) is the same figure for now.
-  const assets = accounts.filter((a) => a.type !== "credit_card").reduce((s, a) => s + a.balance, 0);
-  const cardOutstanding = accounts.filter((a) => a.type === "credit_card").reduce((s, a) => s + a.balance, 0);
+  const assets = allAccounts.filter((a) => a.type !== "credit_card").reduce((s, a) => s + a.balance, 0);
+  const cardOutstanding = allAccounts.filter((a) => a.type === "credit_card").reduce((s, a) => s + a.balance, 0);
   const netBalance = assets - cardOutstanding;
   const netWorth = netBalance;
 
@@ -49,7 +53,7 @@ export default async function DashboardPage() {
   const pendingCount = queue.data!.length;
   const pendingTotal = queue.data!.reduce((s, r) => s + Number(r.amount ?? 0), 0);
 
-  if (accounts.length === 0) {
+  if (allAccounts.length === 0) {
     return (
       <div className="card mx-auto max-w-md space-y-3 text-center">
         <h1 className="text-lg font-semibold">Welcome to Recordkar</h1>
@@ -123,6 +127,14 @@ export default async function DashboardPage() {
               <span className="tabular">
                 {a.type === "credit_card" ? <span className="text-ink-2">{inr(a.balance)} due</span> : inr(a.balance)}
               </span>
+            </li>
+          ))}
+          {archivedWithMoney.map((a) => (
+            <li key={a.id} className="flex items-center justify-between py-2 text-sm text-ink-2">
+              <span>
+                {a.name} <span className="text-xs text-ink-3">· archived</span>
+              </span>
+              <span className="tabular">{a.type === "credit_card" ? `${inr(a.balance)} due` : inr(a.balance)}</span>
             </li>
           ))}
         </ul>
