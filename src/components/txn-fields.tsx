@@ -48,7 +48,10 @@ export function TxnFields({ draft, onChange, master, issues, showIssues, importI
   const type = draft.type;
   const isOpening = type === "OPENING_BALANCE";
   const manualTransfer = mode === "manual" && type === "TRANSFER";
-  const showDirection = !isOpening && !manualTransfer && (mode === "queue" || !fixedDirection(type));
+  // Queue: always shown (statement evidence). Manual: only once a type is chosen, and only for types
+  // that don't imply it (Adjustment, Other) — Expense/Income/Refund imply it, Transfer uses From → To.
+  const showDirection =
+    !isOpening && !manualTransfer && (mode === "queue" || (type !== null && !fixedDirection(type)));
   const kinds = allowedCounterKinds(type);
   const counterId = draft.counter && draft.counter.kind !== "system" ? draft.counter.id : null;
   const acctCard = master.accounts.find((a) => a.id === draft.accountId)?.type === "credit_card";
