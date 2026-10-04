@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+/* Recordkar tokens. Brand: teal #0F6E56 / #1D9E75, amber #BA7517 / #EF9F27 (requirements §1).
+   Chart marks use validated steps (dataviz validator): light teal #0B7D5E / amber #BA7517,
+   dark teal #1D9E75 / amber #C98018. */
+:root {
+  color-scheme: light;
+  --bg: #f6f7f6;
+  --surface: #ffffff;
+  --surface-2: #eef2f0;
+  --border: #dfe5e2;
+  --ink: #15201c;
+  --ink-2: #4a5852;
+  --ink-3: #6f7c77;
+  --brand: #0f6e56;
+  --brand-ink: #ffffff;
+  --accent: #ba7517;
+  --mark-pos: #0b7d5e;
+  --mark-neg: #ba7517;
+  --danger: #b42318;
+  --warn-bg: #fdf3e2;
+  --warn-ink: #7a4a0c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #0b0f0d;
+    --surface: #111614;
+    --surface-2: #1a211e;
+    --border: #2a3430;
+    --ink: #e8eeeb;
+    --ink-2: #b2bfb9;
+    --ink-3: #8a9893;
+    --brand: #1d9e75;
+    --brand-ink: #04140e;
+    --accent: #ef9f27;
+    --mark-pos: #1d9e75;
+    --mark-neg: #c98018;
+    --danger: #f97066;
+    --warn-bg: #2c2110;
+    --warn-ink: #f5c37a;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-brand: var(--brand);
+  --color-brand-ink: var(--brand-ink);
+  --color-accent: var(--accent);
+  --color-mark-pos: var(--mark-pos);
+  --color-mark-neg: var(--mark-neg);
+  --color-danger: var(--danger);
+  --color-warn-bg: var(--warn-bg);
+  --color-warn-ink: var(--warn-ink);
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@utility card {
+  @apply rounded-xl border border-border bg-surface p-4;
+}
+@utility input {
+  @apply w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:opacity-60;
+}
+@utility input-error {
+  @apply border-danger;
+}
+@utility label {
+  @apply mb-1 block text-xs font-medium text-ink-2;
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-brand text-brand-ink hover:brightness-110;
+}
+@utility btn-secondary {
+  @apply btn border border-border bg-surface text-ink hover:bg-surface-2;
+}
+@utility btn-ghost {
+  @apply btn text-ink-2 hover:bg-surface-2 hover:text-ink;
+}
+@utility btn-danger {
+  @apply btn border border-danger/40 text-danger hover:bg-danger/10;
+}
+@utility field-error {
+  @apply mt-1 text-xs text-danger;
+}
