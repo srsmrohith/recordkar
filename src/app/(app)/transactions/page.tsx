@@ -86,10 +86,10 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/tra
             return (
               <li key={t.id}>
                 <Link href={`/transactions/${t.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-surface-2">
-                  <div className="w-16 shrink-0 text-xs text-ink-3">{formatDate(t.txn_date).slice(0, 6)}</div>
+                  <div className="w-14 shrink-0 self-start pt-0.5 text-xs text-ink-3">{formatDate(t.txn_date).slice(0, 6)}</div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{t.merchant || t.description || counter}</p>
-                    <p className="truncate text-xs text-ink-3">
+                    <p className="break-words text-xs text-ink-3">
                       {TXN_TYPE_LABELS[t.type as TxnType]} · {account}
                       {/* Opening balances and adjustments have no real "other side" worth showing. */}
                       {!t.counter_system_head && ` ${out ? "→" : "←"} ${counter}`}
