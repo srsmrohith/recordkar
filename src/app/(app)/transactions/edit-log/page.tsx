@@ -3,6 +3,7 @@ import Link from "next/link";
 import { loadMaster } from "@/lib/data";
 import { describeEntry, type AuditEntry } from "@/lib/edit-log";
 import { formatDateTime } from "@/lib/format";
+import { loadImportSources } from "@/lib/import-sources";
 import { requireUser } from "@/lib/supabase/server";
 import { TransactionsTabs } from "../tabs";
 
@@ -42,6 +43,8 @@ export default async function EditLogPage({ searchParams }: PageProps<"/transact
     : { data: [] as { id: string }[], error: null };
   if (existing.error) throw new Error(existing.error.message);
   const live = new Set(existing.data.map((t) => t.id));
+  // "Imported from <file> on <date>" for transactions approved from the Queue (deleted ones included).
+  const sources = await loadImportSources(supabase, ids);
 
   const olderHref = `/transactions/edit-log?${new URLSearchParams({
     ...(transactionId ? { transaction: transactionId } : {}),
@@ -96,6 +99,9 @@ export default async function EditLogPage({ searchParams }: PageProps<"/transact
                   <span className="min-w-0 flex-1 truncate text-sm font-medium">{item.title}</span>
                   <time dateTime={entry.changed_at} className="text-xs text-ink-3">{formatDateTime(entry.changed_at)}</time>
                 </div>
+                {entry.action !== "update" && sources.get(entry.entity_id) && (
+                  <p className="text-xs text-ink-2">{sources.get(entry.entity_id)}</p>
+                )}
 
                 <dl className="grid grid-cols-[minmax(7rem,auto)_1fr] gap-x-3 gap-y-1 text-sm">
                   {item.rows.map((row, i) => (

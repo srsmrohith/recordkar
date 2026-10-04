@@ -29,6 +29,11 @@ export function formatDate(iso: string | null | undefined): string {
   });
 }
 
+/** The calendar date (YYYY-MM-DD) of a timestamp in India time. */
+export function isoDateInIndia(timestamp: string): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: APP_TIME_ZONE }).format(new Date(timestamp));
+}
+
 /** A timestamp in India time, e.g. "04 Oct 2026, 4:35 pm". */
 export function formatDateTime(timestamp: string): string {
   return new Date(timestamp).toLocaleString("en-IN", {
