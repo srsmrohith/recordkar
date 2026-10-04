@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { allowedCounterKinds, counterLabel, fixedDirection, normalizeDraft, type Issues } from "@/lib/engine/treatment";
 import { TXN_TYPES, type Counter, type MasterData, type TxnDraft, type TxnType } from "@/lib/engine/types";
 import { TXN_TYPE_LABELS } from "@/lib/format";
+import { detailsOpenByDefault, detailsSummary } from "@/lib/txn-details";
 
 type Props = {
   draft: TxnDraft;
@@ -39,8 +40,9 @@ const visible = <T extends { id: string; archived?: boolean }>(list: T[], select
 export function TxnFields({ draft, onChange, master, issues, showIssues, importIssues = {}, mode, detailsOpen }: Props) {
   const uid = useId();
   const [moreOpen, setMoreOpen] = useState(
-    detailsOpen ?? Boolean(draft.eventId || draft.notes || draft.valueDate || draft.reference),
+    detailsOpen ?? detailsOpenByDefault(mode, draft, { event: importIssues.event ?? issues.event }),
   );
+  const summary = detailsSummary(draft, master);
   const set = (patch: Partial<TxnDraft>) => onChange({ ...draft, ...patch });
   const msg = (field: keyof Issues) => (issues[field] ? importIssues[field] ?? (showIssues ? issues[field] : undefined) : undefined);
   const cls = (field: keyof Issues) => `input ${msg(field) ? "input-error" : ""}`;
@@ -182,13 +184,18 @@ export function TxnFields({ draft, onChange, master, issues, showIssues, importI
         )}
       </div>
 
-      {mode === "queue" && draft.description && !moreOpen && (
-        <p className="truncate text-xs text-ink-3" title={draft.description}>{draft.description}</p>
-      )}
-
       <div>
-        <button type="button" className="text-xs font-medium text-brand" aria-expanded={moreOpen} onClick={() => setMoreOpen(!moreOpen)}>
-          {moreOpen ? "− Fewer details" : "+ More details"}
+        <button
+          type="button"
+          className="flex max-w-full items-baseline gap-2 text-left text-xs"
+          aria-expanded={moreOpen}
+          onClick={() => setMoreOpen(!moreOpen)}
+        >
+          <span className="shrink-0 font-medium text-brand">{moreOpen ? "− Fewer details" : "+ More details"}</span>
+          {/* Collapsed: a compact one-line summary of what's inside. */}
+          {!moreOpen && summary && (
+            <span className="min-w-0 truncate text-ink-3" title={summary}>{summary}</span>
+          )}
         </button>
         {moreOpen && (
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
