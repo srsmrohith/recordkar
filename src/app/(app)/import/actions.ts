@@ -11,8 +11,10 @@ import {
   planImport,
   referenceKeys,
   type ImportSummary,
+  type SkipReason,
   type PreviousImport,
 } from "@/lib/engine/import-plan";
+import { rowOutcome, type QueueRowState, type RowOutcome } from "@/lib/engine/import-outcome";
 import { draftToRow } from "@/lib/engine/treatment";
 import { formatDate, isoDateInIndia } from "@/lib/format";
 import { requireUser } from "@/lib/supabase/server";
@@ -153,8 +155,8 @@ export async function importCsv(_: ImportState, form: FormData): Promise<ImportS
     const queueRows = [];
     for (const [i, r] of resolved.entries()) {
       const externalId = randomUUID();
-      externals.push({ id: externalId, import_batch_id: batchId, row_number: r.rowNumber, raw: r.raw });
       const plan = plans[i];
+      externals.push({ id: externalId, import_batch_id: batchId, row_number: r.rowNumber, raw: r.raw, skip_reason: plan.skip });
       if (plan.skip) continue;
       queueRows.push({
         import_batch_id: batchId,
@@ -177,7 +179,12 @@ export async function importCsv(_: ImportState, form: FormData): Promise<ImportS
     });
     if (batch.error) return { status: "error", error: friendlyDbError(batch.error) };
 
-    const ext = await supabase.from("external_transactions").insert(externals);
+    let ext = await supabase.from("external_transactions").insert(externals);
+    // Before migration 20261005000100 the skip_reason column doesn't exist; import without it rather
+    // than fail (Import history then shows "reason not recorded" for those skipped rows).
+    if (ext.error && /skip_reason/.test(ext.error.message)) {
+      ext = await supabase.from("external_transactions").insert(externals.map(({ id, import_batch_id, row_number, raw }) => ({ id, import_batch_id, row_number, raw })));
+    }
     if (ext.error) return { status: "error", error: friendlyDbError(ext.error) };
 
     if (queueRows.length > 0) {
@@ -190,4 +197,60 @@ export async function importCsv(_: ImportState, form: FormData): Promise<ImportS
   } catch (e) {
     return { status: "error", error: e instanceof Error ? e.message : "Import failed." };
   }
+}
+
+export type ImportRowDetail = {
+  rowNumber: number;
+  date: string | null;
+  label: string;
+  amount: string | null;
+  direction: string | null;
+  outcome: RowOutcome;
+  transactionId: string | null;
+};
+
+/** Per-row outcomes for one import, for the expandable Import history. */
+export async function loadImportRows(batchId: string): Promise<{ ok: true; rows: ImportRowDetail[] } | { ok: false; error: string }> {
+  const { supabase } = await requireUser();
+  let ext = await supabase
+    .from("external_transactions")
+    .select("id, row_number, raw, skip_reason")
+    .eq("import_batch_id", batchId)
+    .order("row_number");
+  if (ext.error && /skip_reason/.test(ext.error.message)) {
+    // Migration 20261005000100 not run yet.
+    ext = (await supabase
+      .from("external_transactions")
+      .select("id, row_number, raw")
+      .eq("import_batch_id", batchId)
+      .order("row_number")) as typeof ext;
+  }
+  if (ext.error) return { ok: false, error: friendlyDbError(ext.error) };
+
+  const [queue, master] = await Promise.all([
+    supabase.from("transaction_queue").select("*").eq("import_batch_id", batchId),
+    loadMaster(supabase),
+  ]);
+  if (queue.error) return { ok: false, error: friendlyDbError(queue.error) };
+  // Posted rows link to their transaction only while it still exists (deleted ones keep their outcome).
+  const postedIds = queue.data.map((q) => q.posted_transaction_id).filter(Boolean);
+  const live = postedIds.length ? await supabase.from("transactions").select("id").in("id", postedIds) : { data: [] };
+  const byExternal = new Map(queue.data.map((q) => [q.external_transaction_id, q as QueueRowState]));
+  const liveIds = new Set((live.data ?? []).map((t) => t.id));
+
+  const rows = ext.data.map((e) => {
+    const raw = e.raw as RawRow;
+    const q = byExternal.get(e.id) ?? null;
+    const skip = ((e as { skip_reason?: SkipReason | null }).skip_reason ?? null) as SkipReason | null;
+    return {
+      rowNumber: e.row_number,
+      date: raw["Transaction Date"] ?? null,
+      label: [raw.Merchant, raw.Description].filter(Boolean).join(" · ") || raw.Account || "—",
+      amount: raw.Amount ?? null,
+      direction: raw["Debit/Credit"] ?? null,
+      outcome: rowOutcome(skip, q, master),
+      transactionId: q?.posted_transaction_id && liveIds.has(q.posted_transaction_id) ? q.posted_transaction_id : null,
+    };
+  });
+  return { ok: true, rows };
 }
