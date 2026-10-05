@@ -119,7 +119,8 @@ Order of information, top to bottom:
 **Navigation (decided in Phase 1):**
 - **Queue** menu item shows the pending count, e.g. "Queue (12)".
 - **Edit log** (stored in the audit_history table) lives inside Transactions as a tab ("All transactions" / "Edit log"), plus a "View edit log" link on each transaction. It is not a top-level menu item. It uses plain wording — no accounting jargon; Dr/Cr appears only in the treatment preview — and shows "Imported from <file name> on <date>" for transactions approved from the Queue.
-- **Import wording:** "Import" is the menu item; buttons and headings say "Import file".
+- **Import wording:** "Import" is the menu item; buttons and headings say "Import file". Import history rows expand to per-row outcomes (queued, skipped, flagged) with reasons and show the upload time.
+- **Transactions filters (extends original §4 Transaction Explorer):** account, category / income head, event, text search on merchant and description, amount range, and a date range or all dates, with Export CSV of the current filtered view (carries the §8 disclaimer). Each account on the Accounts page opens its own filtered transactions.
 - **Accounts:** each account shows its opening balance and "Balance as of" date, editable through the same engine and Edit log.
 - **Master data** holds the lists transactions are classified with: expense categories, income heads, events (People and Groups join in Phase 2). The old `/settings` route redirects to it.
 - **Settings** is reserved for future user preferences — alerts, backup & restore, plan, profile — and is not built yet.

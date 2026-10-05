@@ -14,7 +14,10 @@ Review & Post, CSV template import → Queue review (inline edit, duplicate flag
    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable key>
    ```
    The app never uses the secret key.
-2. Run `supabase/migrations/20261004000000_phase1_core.sql` once in the Supabase SQL Editor.
+2. Run each file in `supabase/migrations/` once, in filename order, in the Supabase SQL Editor:
+   `20261004000000_phase1_core.sql`, `20261005000000_more_default_categories.sql`,
+   `20261005000100_import_row_outcomes.sql`. To give an existing account the default categories added on
+   2026-10-05, run `supabase/snippets/add-new-default-categories.sql` with its email filled in.
 3. Supabase → Authentication → URL Configuration: set **Site URL** to `http://localhost:3000` and add
    `http://localhost:3000/auth/callback` to **Redirect URLs**. (Add your deployed URLs here later.)
    Sign-in uses Supabase's default magic-link email — no template changes or custom SMTP needed.

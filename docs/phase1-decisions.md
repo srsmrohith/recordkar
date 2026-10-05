@@ -38,7 +38,11 @@ They fill gaps in `recordkar-requirements.md` and `rupevo-original-requirements.
 
 ## Data
 - Account types in Phase 1: Bank, Cash, Credit card, Wallet (Wallet counts like Bank/Cash in Net Balance).
-- New users get editable default expense categories and income heads (seeded on sign-up).
+- New users get editable default expense categories and income heads (seeded on sign-up). Expense categories:
+  Food & Dining, Groceries, Rent, Utilities, Transport, Fuel, Shopping, Household, Health, Personal care, Insurance,
+  Entertainment, Subscriptions, Education, Travel, Gifts & Donations, Bank Charges, Taxes & fees, Miscellaneous
+  (the last eight added 2026-10-05). There is no EMI category — EMIs are split into principal and interest by the
+  Loans module. Existing accounts get the new ones via `supabase/snippets/add-new-default-categories.sql`.
 - Events are a Phase 1 tag master. Person/Group values from CSV are kept as raw text on the Queue item and mapped in Phase 2.
 - **Archiving an account** is only allowed when its balance (or card outstanding) is exactly ₹0; otherwise the user
   is told to "Move or adjust the remaining ₹X first". Archiving asks for confirmation. Archived accounts keep their
@@ -90,6 +94,10 @@ They fill gaps in `recordkar-requirements.md` and `rupevo-original-requirements.
   fixing), and the Queue keeps its scroll position after bulk and card actions.
 - Wording: "Import" is the menu item; buttons and headings say "Import file". The Import page's steps are
   "1. Download the template" and "2. Upload your completed file".
+- **Import history** shows upload time (India time); each import expands to every uploaded row with its outcome —
+  Skipped (repeated in this file / already recorded), In Queue (and what's holding it up), Posted or Discarded —
+  plus a Flagged tag for possible duplicates. Skip reasons are stored from 2026-10-05 (`external_transactions.skip_reason`).
+- The Import page instructions are short bullets.
 
 ## Dashboard
 - Budgets (section 3) and People (section 5) are hidden until Phase 2.
@@ -99,10 +107,17 @@ They fill gaps in `recordkar-requirements.md` and `rupevo-original-requirements.
 - Headline numbers (Net worth, this month's surplus) show whole rupees; transaction lists and entries keep paise.
 - In the "Last 4 months" table, months before the first transaction show "—" instead of ₹0.00.
 
+- "Last 4 months" on the Dashboard uses whole rupees; short month names are three letters everywhere ("Sep").
+
 ## Navigation
 - Main menu: Dashboard, Transactions, Accounts, Queue, Import, Master data. The Queue item shows the pending
   count, e.g. "Queue (12)".
 - Transactions has two tabs: All transactions and Edit log.
+- **Transactions filters:** month-by-month navigation (default), or a From/To date range, or All dates; plus
+  account (either side of a transfer), category or income head, event, text search on merchant and description,
+  and an amount range. **Export CSV** downloads exactly the current filtered view (up to 10,000 rows) with the
+  personal-use disclaimer as its first line; text that could run as a spreadsheet formula is neutralised.
+- Each account on the Accounts page opens its transactions across all dates ("View transactions →").
 - **Master data** (expense categories, income heads, events) replaces the earlier "Settings" page; `/settings`
   redirects to `/master-data` with a temporary (307) redirect so the name stays free.
 - **Settings** is reserved for future preferences — alerts, backup & restore, plan, profile — and is not built yet.
