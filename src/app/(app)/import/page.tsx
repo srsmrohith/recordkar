@@ -31,12 +31,14 @@ export default async function ImportPage() {
 
       <section className="card space-y-2 text-sm">
         <h2 className="text-sm font-semibold">1. Download the template</h2>
-        <p className="text-ink-2">
-          Fill one row per transaction and save as CSV. Required: {REQUIRED_COLUMNS.join(", ")}. Dates as YYYY-MM-DD or
-          DD/MM/YYYY. Amounts are always positive; Debit/Credit gives the direction (Debit = money out or card charge).
-          For transfers, the other account is asked during review. Person and Group are kept and linked once People
-          &amp; Groups are available.
-        </p>
+        <ul className="list-disc space-y-0.5 pl-5 text-ink-2">
+          <li>One row per transaction; save as CSV.</li>
+          <li>Required: {REQUIRED_COLUMNS.join(", ")}.</li>
+          <li>Dates: YYYY-MM-DD or DD/MM/YYYY.</li>
+          <li>Amounts are positive. Debit = money out or card charge; Credit = money in.</li>
+          <li>Transfers: you pick the other account during review.</li>
+          <li>Person and Group are kept for later.</li>
+        </ul>
         <a href="/import/template" className="btn-secondary" download>Download template (CSV)</a>
       </section>
 
