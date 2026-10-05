@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { AccountType } from "@/lib/engine/types";
 import { ACCOUNT_TYPE_LABELS, inr } from "@/lib/format";
 import { requireUser } from "@/lib/supabase/server";
+import { accountTransactionsHref } from "@/lib/txn-filters";
 import { AccountForm } from "./account-form";
 import { ArchiveButton } from "./archive-button";
 import { OpeningBalance } from "./opening-balance";
@@ -61,13 +62,16 @@ function AccountRow({ account: a, opening }: { account: Row; opening: Opening | 
   return (
     <li className="flex flex-wrap items-start gap-x-3 gap-y-1 px-4 py-3">
       <div className="min-w-0 flex-1">
-        <Link href={`/transactions?account=${a.id}`} className="text-sm font-medium hover:underline">{a.name}</Link>
+        <Link href={accountTransactionsHref(a.id)} className="text-sm font-medium hover:underline">{a.name}</Link>
         <p className="text-xs text-ink-3">{ACCOUNT_TYPE_LABELS[a.type]}</p>
         <OpeningBalance accountId={a.id} isCard={isCard} opening={opening} />
       </div>
       <div className="text-right">
         <p className="text-sm font-medium tabular">{inr(a.balance)}</p>
         <p className="text-xs text-ink-3">{isCard ? "outstanding" : "balance"}</p>
+        <Link href={accountTransactionsHref(a.id)} className="mt-1 inline-block text-xs font-medium text-brand">
+          View transactions →
+        </Link>
       </div>
       <ArchiveButton id={a.id} name={a.name} archived={a.archived} balance={Number(a.balance)} isCard={isCard} />
     </li>

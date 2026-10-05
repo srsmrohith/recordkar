@@ -94,3 +94,8 @@ export function filtersToQuery(f: TxnFilters, overrides: Partial<TxnFilters> = {
 export function activeFilterCount(f: TxnFilters): number {
   return [f.account, f.counter, f.event, f.q, f.min, f.max].filter((v) => v !== null).length;
 }
+
+/** An account's own transactions — every date, both sides of transfers — e.g. from the Accounts page. */
+export function accountTransactionsHref(accountId: string): string {
+  return `/transactions?${new URLSearchParams({ all: "1", account: accountId })}`;
+}

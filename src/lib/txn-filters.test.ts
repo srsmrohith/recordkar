@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildTransactionsCsv, EXPORT_DISCLAIMER, safeCell, type ExportRow } from "./export-csv";
 import type { MasterData } from "./engine/types";
-import { activeFilterCount, filtersToQuery, parseTxnFilters, sanitizeSearch } from "./txn-filters";
+import { accountTransactionsHref, activeFilterCount, filtersToQuery, parseTxnFilters, sanitizeSearch } from "./txn-filters";
 
 const today = "2026-10-05";
 const A = "11111111-1111-4111-8111-111111111111";
@@ -86,5 +86,16 @@ describe("Export CSV", () => {
     expect(safeCell("@cmd")).toBe("'@cmd");
     expect(safeCell("Swiggy")).toBe("Swiggy");
     expect(safeCell(null)).toBe("");
+  });
+});
+
+describe("account links", () => {
+  it("open the account's transactions across all dates", () => {
+    const href = accountTransactionsHref(A);
+    expect(href).toBe(`/transactions?all=1&account=${A}`);
+    expect(parseTxnFilters(Object.fromEntries(new URLSearchParams(href.split("?")[1])), today)).toMatchObject({
+      dates: { mode: "all" },
+      account: A,
+    });
   });
 });
