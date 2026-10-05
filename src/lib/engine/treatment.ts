@@ -1,3 +1,4 @@
+import { todayIso } from "../format";
 import type {
   Component,
   Counter,
@@ -90,12 +91,13 @@ export function counterLabel(type: TxnType | null, direction: Direction | null):
  * Ask for missing required inputs (Rupevo §2): returns one message per incomplete field.
  * An empty result means the draft can be approved and posted.
  */
-export function validateDraft(input: TxnDraft, master: MasterData): Issues {
+export function validateDraft(input: TxnDraft, master: MasterData, opts: { today?: string } = {}): Issues {
   const d = normalizeDraft(input);
   const issues: Issues = {};
 
   if (!d.txnDate) issues.txnDate = "Date is required";
   else if (!isValidIsoDate(d.txnDate)) issues.txnDate = "Date is not valid";
+  else if (d.txnDate > (opts.today ?? todayIso())) issues.txnDate = "Date can't be in the future";
 
   if (!d.type) issues.type = "Choose a transaction type";
 

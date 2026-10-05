@@ -1,13 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { TreatmentPreview } from "@/components/treatment-preview";
 import { TxnFields } from "@/components/txn-fields";
+import { openingConflict } from "@/lib/engine/counting";
 import { textSimilarity } from "@/lib/engine/duplicates";
 import { allowedCounterKinds, hasIssues, validateDraft, type Issues } from "@/lib/engine/treatment";
 import { TXN_TYPES, type Counter, type MasterData, type TxnDraft, type UserTxnType } from "@/lib/engine/types";
 import { formatDate, inr, TXN_TYPE_LABELS } from "@/lib/format";
+import { changeOpeningHref, queueNote } from "@/lib/opening-notes";
 import { preserveScrollAcrossRefresh } from "@/lib/scroll";
 import {
   approveQueueItem,
@@ -235,6 +238,7 @@ function QueueCard({
   onBeforeAction: () => void;
 }) {
   const issues = useMemo(() => validateDraft(draft, master), [draft, master]);
+  const beforeOpening = useMemo(() => openingConflict(draft, master), [draft, master]);
   const [error, setError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"saved" | "saving" | "error">("saved");
   const [pending, startTransition] = useTransition();
@@ -307,6 +311,16 @@ function QueueCard({
       )}
 
       <TxnFields draft={draft} onChange={change} master={master} issues={issues} showIssues importIssues={item.importIssues} mode="queue" />
+
+      {/* Imported rows may be dated before the account's opening balance date: approvable, but not counted. */}
+      {beforeOpening && (
+        <div className="rounded-lg bg-warn-bg px-3 py-2 text-sm text-warn-ink" role="note">
+          <p>{queueNote(beforeOpening)}</p>
+          <Link href={changeOpeningHref(beforeOpening.accountId, draft.txnDate, "/queue")} className="btn-secondary mt-2">
+            Change opening balance
+          </Link>
+        </div>
+      )}
 
       {(item.personText || item.groupText) && (
         <p className="text-xs text-ink-3">

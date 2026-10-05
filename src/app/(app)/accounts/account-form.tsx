@@ -37,7 +37,7 @@ export function AccountForm() {
           </select>
         </div>
         <div>
-          <label htmlFor="acct-opening" className="label">{isCard ? "Outstanding on that date (₹)" : "Balance on that date (₹)"}</label>
+          <label htmlFor="acct-opening" className="label">{isCard ? "Outstanding at the start of that day (₹)" : "Balance at the start of that day (₹)"}</label>
           <input id="acct-opening" name="opening" type="number" inputMode="decimal" step="0.01" min="0" placeholder="0" className="input tabular" />
         </div>
         <div>
@@ -47,11 +47,12 @@ export function AccountForm() {
             name="asOf"
             type="date"
             defaultValue={todayIso()}
+            max={todayIso()}
             className="input"
             aria-describedby="acct-asof-hint"
           />
           <p id="acct-asof-hint" className="mt-1 text-xs text-ink-3">
-            Choose the day before the earliest transaction you plan to import.
+            Enter the date of your earliest transaction and the balance at the start of that day, usually the opening balance on your bank statement.
           </p>
         </div>
       </div>

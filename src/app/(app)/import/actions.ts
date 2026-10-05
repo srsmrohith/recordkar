@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { friendlyDbError, loadMaster } from "@/lib/data";
 import { loadDuplicateCandidates } from "@/lib/duplicates-server";
+import { groupBeforeOpening, type OpeningConflict } from "@/lib/engine/counting";
 import { parseTemplateCsv, resolveRow, type RawRow } from "@/lib/engine/csv";
 import {
   fileFingerprint,
@@ -15,7 +16,7 @@ import {
   type PreviousImport,
 } from "@/lib/engine/import-plan";
 import { rowOutcome, type QueueRowState, type RowOutcome } from "@/lib/engine/import-outcome";
-import { draftToRow } from "@/lib/engine/treatment";
+import { draftFromRow, draftToRow } from "@/lib/engine/treatment";
 import { formatDate, isoDateInIndia } from "@/lib/format";
 import { requireUser } from "@/lib/supabase/server";
 
@@ -23,7 +24,10 @@ export type ImportState =
   | { status: "idle" }
   | { status: "error"; error: string }
   | { status: "confirm"; fileName: string; importedOn: string }
-  | ({ status: "done"; fileName: string } & ImportSummary);
+  | ({ status: "done"; fileName: string; beforeOpening: BeforeOpening[] } & ImportSummary);
+
+/** Queued rows dated before their account's opening balance date (approvable, but not counted). */
+export type BeforeOpening = OpeningConflict & { count: number };
 
 const MAX_BYTES = 2 * 1024 * 1024;
 
@@ -193,7 +197,8 @@ export async function importCsv(_: ImportState, form: FormData): Promise<ImportS
     }
 
     revalidatePath("/", "layout");
-    return { status: "done", fileName: file.name, ...summary };
+    const queuedDrafts = resolved.filter((_, i) => !plans[i].skip).map((r) => r.draft);
+    return { status: "done", fileName: file.name, ...summary, beforeOpening: groupBeforeOpening(queuedDrafts, master) };
   } catch (e) {
     return { status: "error", error: e instanceof Error ? e.message : "Import failed." };
   }
@@ -210,7 +215,9 @@ export type ImportRowDetail = {
 };
 
 /** Per-row outcomes for one import, for the expandable Import history. */
-export async function loadImportRows(batchId: string): Promise<{ ok: true; rows: ImportRowDetail[] } | { ok: false; error: string }> {
+export async function loadImportRows(
+  batchId: string,
+): Promise<{ ok: true; rows: ImportRowDetail[]; beforeOpening: BeforeOpening[] } | { ok: false; error: string }> {
   const { supabase } = await requireUser();
   let ext = await supabase
     .from("external_transactions")
@@ -252,5 +259,7 @@ export async function loadImportRows(batchId: string): Promise<{ ok: true; rows:
       transactionId: q?.posted_transaction_id && liveIds.has(q.posted_transaction_id) ? q.posted_transaction_id : null,
     };
   });
-  return { ok: true, rows };
+  // Rows still in the Queue or posted that are dated before their account's opening balance date.
+  const kept = queue.data.filter((q) => q.status !== "discarded").map((q) => draftFromRow(q as QueueRowState));
+  return { ok: true, rows, beforeOpening: groupBeforeOpening(kept, master) };
 }

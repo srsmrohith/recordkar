@@ -45,7 +45,8 @@ export type Component = {
 };
 
 export type Named = { id: string; name: string; archived?: boolean };
-export type AccountRef = Named & { type: AccountType };
+/** openingDate: the account's opening balance date — the start of its records (null if none). */
+export type AccountRef = Named & { type: AccountType; openingDate?: string | null };
 export type IncomeHeadRef = Named & { nature: IncomeNature };
 
 /** Master data needed to validate and describe a draft. */

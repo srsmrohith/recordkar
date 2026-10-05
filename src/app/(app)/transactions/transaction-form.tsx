@@ -1,12 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { TreatmentPreview } from "@/components/treatment-preview";
 import { TxnFields } from "@/components/txn-fields";
+import { openingConflict, type OpeningConflict } from "@/lib/engine/counting";
 import { hasIssues, validateDraft } from "@/lib/engine/treatment";
 import type { MasterData, TxnDraft } from "@/lib/engine/types";
 import { formatDate, inr } from "@/lib/format";
+import { blockedMessage, changeOpeningHref } from "@/lib/opening-notes";
 import { deleteTransaction, postManualTransaction, updateTransaction, type PostResult } from "./actions";
 
 type Props = {
@@ -16,6 +18,8 @@ type Props = {
   transactionId?: string;
   fieldsMode?: "manual" | "queue";
 };
+
+const draftKey = () => `rk:draft:${window.location.pathname}`;
 
 /** Manual entry: fill form → see proposed Dr/Cr inline → Review & Post (bypasses the Queue, §2). */
 export function TransactionForm({ master, initial, transactionId, fieldsMode = "manual" }: Props) {
@@ -27,6 +31,27 @@ export function TransactionForm({ master, initial, transactionId, fieldsMode = "
   const [pending, startTransition] = useTransition();
   const issues = useMemo(() => validateDraft(draft, master), [draft, master]);
   const editing = Boolean(transactionId);
+  // Dated before an account's opening balance date: blocked here and in the database.
+  const conflict = useMemo(() => openingConflict(draft, master), [draft, master]);
+  const blocked: OpeningConflict | null = conflict ?? (result && !result.ok && "openingConflict" in result ? (result.openingConflict ?? null) : null);
+
+  // Coming back from "Change opening balance": restore what was being typed.
+  useEffect(() => {
+    const key = draftKey();
+    const saved = sessionStorage.getItem(key);
+    if (!saved) return;
+    // Remove only once restored: React may run this effect twice (cancelling the first timer).
+    const t = setTimeout(() => {
+      sessionStorage.removeItem(key);
+      setDraft(JSON.parse(saved) as TxnDraft);
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
+
+  function changeOpeningBalance(c: OpeningConflict) {
+    sessionStorage.setItem(draftKey(), JSON.stringify(draft));
+    router.push(changeOpeningHref(c.accountId, draft.txnDate, window.location.pathname + window.location.search));
+  }
 
   const change = (next: TxnDraft) => {
     setDraft(next);
@@ -35,7 +60,7 @@ export function TransactionForm({ master, initial, transactionId, fieldsMode = "
 
   function submit(allowDuplicate = false) {
     setSubmitted(true);
-    if (hasIssues(issues)) return;
+    if (hasIssues(issues) || conflict) return;
     startTransition(async () => {
       const r = editing ? await updateTransaction(transactionId!, draft) : await postManualTransaction(draft, allowDuplicate);
       setResult(r);
@@ -65,8 +90,15 @@ export function TransactionForm({ master, initial, transactionId, fieldsMode = "
 
       <TreatmentPreview draft={draft} master={master} />
 
-      {result && !result.ok && "error" in result && (
-        <p className="field-error text-sm" role="alert">{result.error}</p>
+      {blocked ? (
+        <div className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-3 text-sm" role="alert">
+          <p>{blockedMessage(blocked)}</p>
+          <button type="button" className="btn-secondary mt-2" onClick={() => changeOpeningBalance(blocked)}>
+            Change opening balance
+          </button>
+        </div>
+      ) : (
+        result && !result.ok && "error" in result && <p className="field-error text-sm" role="alert">{result.error}</p>
       )}
 
       {result && !result.ok && "duplicate" in result && (
@@ -87,7 +119,7 @@ export function TransactionForm({ master, initial, transactionId, fieldsMode = "
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <button className="btn-primary" disabled={pending || (submitted && hasIssues(issues))}>
+        <button className="btn-primary" disabled={pending || Boolean(conflict) || (submitted && hasIssues(issues))}>
           {pending ? "Posting…" : editing ? "Review & Save changes" : "Review & Post"}
         </button>
         <button type="button" className="btn-ghost" onClick={() => router.back()}>Cancel</button>

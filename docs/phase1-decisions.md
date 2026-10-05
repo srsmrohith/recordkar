@@ -47,10 +47,39 @@ They fill gaps in `recordkar-requirements.md` and `rupevo-original-requirements.
 - **Archiving an account** is only allowed when its balance (or card outstanding) is exactly ₹0; otherwise the user
   is told to "Move or adjust the remaining ₹X first". Archiving asks for confirmation. Archived accounts keep their
   history, and Net worth / Net balance always include them, so money never silently drops out of the totals.
-- **Opening balance:** the account form asks for the balance and a "Balance as of" date (default today; hint: the
-  day before the earliest transaction you plan to import). The Accounts page shows each account's opening balance
-  and date with Edit (or Add if there is none, one per account). Edits use the normal transaction form, so they go
-  through the same engine, Dr = Cr check and Edit log; the account can't be changed on an opening balance.
+- **Opening balance:** the account form asks for the balance and a "Balance as of" date (default today; hint: "Enter
+  the date of your earliest transaction and the balance at the start of that day, usually the opening balance on
+  your bank statement."). The Accounts page shows each account's opening balance and date with Edit (or Add if
+  there is none, one per account), opening a dedicated screen (`/accounts/<id>/opening-balance`).
+- **Opening balance date = start of the account's records** (decided 2026-10-05): the balance *before* that day's
+  transactions.
+  - **Counting rule:** a transaction counts only if its date is on or after the opening balance date of every
+    account it touches (both legs of a transfer). Accounts without an opening balance have no start. Uncounted
+    transactions are excluded whole — account side and category/income side — from balances, Net worth, Net balance,
+    surplus, the 4-month table, reports and CSV export, so everything stays balanced.
+  - **Decided at calculation time:** no status is stored and nothing is deleted (the `account_balances` and
+    `monthly_summary` views use `counted_transactions`; the app uses the same rule in `src/lib/engine/counting.ts`).
+    Moving an opening date earlier brings transactions back automatically. No "set aside" status, no "Earlier
+    entries" section, no extra Queue tab.
+  - **Manual entry and edits** dated before an account's opening date are blocked in the form and in the database
+    (trigger `enforce_transaction_dates`, error RK001), naming the account (for transfers, the leg at fault). The
+    message offers "Change opening balance", which opens the opening-balance screen with the date pre-filled and
+    returns to where the user was (an unsaved manual entry is restored).
+  - **Future dates** are blocked for every posting — manual, edits and Queue approval (form + database, RK002).
+  - **Imported rows** dated before their account's opening date go through the Queue as usual and can be approved or
+    discarded. Their card shows an amber note ("Dated before <account>'s opening balance date (<date>). It won't be
+    counted. To count it, update the opening balance date and amount.") with "Change opening balance". Approved,
+    they are stored but not counted. They still take part in duplicate checks.
+  - **Notes:** import summary and Import history ("N transactions are dated before <account>'s opening balance date
+    and won't be counted…" + button); under the account on the Accounts page; greyed rows in the Transactions list
+    ("Before opening balance date, not counted"); one quiet line on the Dashboard and in CSV exports ("N transactions
+    before opening balance dates aren't counted.").
+  - **Changing the date:** moving it earlier previews "Current balance changes from ₹A to ₹B; M transactions start
+    counting" and requires re-confirming the opening amount (hint "Balance at the start of <new date>"); moving it
+    later requires confirming the listed transactions that will stop counting. Saved through the normal engine
+    (balanced components) and recorded in the Edit log. The opening amount must be more than zero.
+  - Existing data that breaks the rule (e.g. imported rows dated before an opening balance) is shown and excluded as
+    above; it isn't changed. Editing such a row is blocked until the opening date is moved earlier; deleting is allowed.
 
 ## Edits
 - Posted transactions can be edited or deleted. Edits go back through Review & Post; every change is recorded in the

@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Notice } from "@/components/notice";
 import { loadMaster } from "@/lib/data";
+import { isCounted, startsFromMaster } from "@/lib/engine/counting";
 import { headName } from "@/lib/engine/treatment";
 import type { TxnType } from "@/lib/engine/types";
 import { formatDate, inr, monthLabel, monthStart, todayIso, TXN_TYPE_LABELS } from "@/lib/format";
 import { isNoticeKind } from "@/lib/notice";
+import { LIST_LABEL } from "@/lib/opening-notes";
 import { requireUser } from "@/lib/supabase/server";
 import { activeFilterCount, filtersToQuery, parseTxnFilters, type TxnFilters } from "@/lib/txn-filters";
 import { queryTransactions } from "@/lib/txn-query";
@@ -33,6 +35,7 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/tra
   const [master, result] = await Promise.all([loadMaster(supabase), queryTransactions(supabase, filters, LIST_LIMIT + 1)]);
   if (result.error) throw new Error(result.error.message);
   const rows = result.data.slice(0, LIST_LIMIT);
+  const starts = startsFromMaster(master);
   const truncated = result.data.length > LIST_LIMIT;
 
   const extra = activeFilterCount(filters);
@@ -179,9 +182,12 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/tra
             );
             const out = t.direction === "DEBIT";
             const event = t.event_id ? master.events.find((e) => e.id === t.event_id)?.name : null;
+            // Dated before an account's opening balance date: listed, greyed, not counted anywhere.
+            const counted = isCounted(t, starts);
+            const href = t.type === "OPENING_BALANCE" ? `/accounts/${t.account_id}/opening-balance?returnTo=/transactions` : `/transactions/${t.id}`;
             return (
-              <li key={t.id}>
-                <Link href={`/transactions/${t.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-surface-2">
+              <li key={t.id} className={counted ? undefined : "bg-surface-2/60"}>
+                <Link href={href} className={`flex items-center gap-3 px-4 py-3 hover:bg-surface-2 ${counted ? "" : "opacity-60"}`}>
                   <div className="w-14 shrink-0 self-start pt-0.5 text-xs text-ink-3">
                     {formatDate(t.txn_date).slice(0, 6)}
                     {!monthMode && <span className="block">{t.txn_date.slice(0, 4)}</span>}
@@ -195,6 +201,7 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/tra
                       {event && ` · ${event}`}
                       {t.source === "csv" && " · imported"}
                     </p>
+                    {!counted && <p className="text-xs font-medium text-ink-2">{LIST_LABEL}</p>}
                   </div>
                   <div className={`shrink-0 text-sm font-medium tabular ${out ? "text-ink" : "text-brand"}`}>
                     {out ? "−" : "+"}

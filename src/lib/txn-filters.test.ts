@@ -99,3 +99,13 @@ describe("account links", () => {
     });
   });
 });
+
+describe("Export CSV and opening balance dates", () => {
+  it("adds the not-counted note after the disclaimer", () => {
+    const master: MasterData = { accounts: [], categories: [], incomeHeads: [], events: [] };
+    const lines = buildTransactionsCsv([], master, new Map(), ["3 transactions before opening balance dates aren't counted."]).split("\r\n");
+    expect(lines[0]).toBe(`"${EXPORT_DISCLAIMER}"`);
+    expect(lines[1]).toBe("3 transactions before opening balance dates aren't counted.");
+    expect(lines[2]).toMatch(/^Date,/);
+  });
+});

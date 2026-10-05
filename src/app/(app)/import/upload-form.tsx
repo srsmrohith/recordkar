@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useState, useTransition } from "react";
+import { BeforeOpeningNotes } from "./before-opening-notes";
 import { importCsv, type ImportState } from "./actions";
 
 export function UploadForm() {
@@ -89,6 +90,7 @@ export function UploadForm() {
               </li>
             )}
           </ul>
+          <BeforeOpeningNotes groups={state.beforeOpening} />
           {state.queued > 0 && <Link href="/queue" className="btn-primary">Review in Queue</Link>}
         </div>
       )}

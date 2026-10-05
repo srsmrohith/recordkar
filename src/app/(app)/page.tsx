@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { loadMaster } from "@/lib/data";
+import { isCounted, startsFromMaster } from "@/lib/engine/counting";
 import type { AccountType } from "@/lib/engine/types";
 import { ACCOUNT_TYPE_LABELS, inr, inrWhole, monthLabel, monthStart, todayIso } from "@/lib/format";
+import { summaryNote } from "@/lib/opening-notes";
 import { requireUser } from "@/lib/supabase/server";
+import { loadUncounted } from "@/lib/uncounted-server";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -14,21 +18,27 @@ export default async function DashboardPage() {
   const thisMonth = monthStart(todayIso());
   const firstMonth = monthStart(thisMonth, -3);
 
-  const [balances, summary, queue, firstTxn] = await Promise.all([
+  const [balances, summary, queue, firstTxns, master] = await Promise.all([
     // All accounts, archived included: totals must never silently lose money.
     supabase.from("account_balances").select("id, name, type, balance, archived").order("name"),
     supabase.from("monthly_summary").select("month, income, expense, adjustments").gte("month", firstMonth),
     supabase.from("transaction_queue").select("amount").eq("status", "pending"),
-    supabase.from("transactions").select("txn_date").order("txn_date").limit(1),
+    supabase.from("transactions").select("txn_date, account_id, counter_account_id").order("txn_date").limit(200),
+    loadMaster(supabase),
   ]);
-  for (const r of [balances, summary, queue, firstTxn]) if (r.error) throw new Error(r.error.message);
+  for (const r of [balances, summary, queue, firstTxns]) if (r.error) throw new Error(r.error.message);
+  // Balances and monthly figures exclude transactions dated before an account's opening balance
+  // date (done in the database views); say how many, in one quiet line.
+  const uncountedCount = (await loadUncounted(supabase, master)).length;
+  const starts = startsFromMaster(master);
+  const firstCounted = firstTxns.data!.find((t) => isCounted(t, starts));
 
   const allAccounts = (balances.data as Balance[]).map((a) => ({ ...a, balance: Number(a.balance) }));
   const accounts = allAccounts.filter((a) => !a.archived);
   // Archiving requires ₹0, but an old transaction could be edited afterwards; show any such money explicitly.
   const archivedWithMoney = allAccounts.filter((a) => a.archived && Math.round(a.balance * 100) !== 0);
-  // Months before the first transaction show a dash rather than ₹0.00.
-  const firstTxnMonth = firstTxn.data![0] ? monthStart(firstTxn.data![0].txn_date) : null;
+  // Months before the first counted transaction show a dash rather than ₹0.00.
+  const firstTxnMonth = firstCounted ? monthStart(firstCounted.txn_date) : null;
   const months: Month[] = [0, -1, -2, -3].map((delta) => {
     const m = monthStart(thisMonth, delta);
     const row = summary.data!.find((r) => r.month === m);
@@ -151,6 +161,7 @@ export default async function DashboardPage() {
       {/* 6. Current month + previous 3 */}
       <MonthsSummary months={months} />
 
+      {uncountedCount > 0 && <p className="text-center text-xs text-ink-3">{summaryNote(uncountedCount)}</p>}
       <p className="text-center text-xs text-ink-3">For personal use only. Not intended for tax, audit, or statutory reporting purposes.</p>
     </div>
   );

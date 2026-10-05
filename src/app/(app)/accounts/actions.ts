@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { friendlyDbError } from "@/lib/data";
 import { buildComponents, isValidIsoDate, toTxnPayload } from "@/lib/engine/treatment";
 import { emptyDraft, type AccountType } from "@/lib/engine/types";
-import { inr } from "@/lib/format";
+import { inr, todayIso } from "@/lib/format";
 import { requireUser } from "@/lib/supabase/server";
 
 export type AccountFormState = { error?: string; ok?: boolean };
@@ -25,38 +25,6 @@ function openingDraft(accountId: string, type: AccountType, amount: number, asOf
   };
 }
 
-/**
- * Add an opening balance to an account that doesn't have one. Existing opening balances are
- * edited through the normal transaction form, so they share the engine, Dr = Cr check and Edit log.
- */
-export async function addOpeningBalance(
-  accountId: string,
-  _: AccountFormState,
-  form: FormData,
-): Promise<AccountFormState> {
-  const amount = Math.round(Number(String(form.get("amount") ?? "").trim()) * 100) / 100;
-  const asOf = String(form.get("asOf") ?? "");
-  if (!Number.isFinite(amount) || amount <= 0) return { error: "Enter an amount more than zero." };
-  if (!isValidIsoDate(asOf)) return { error: "Choose the date the balance is as of." };
-
-  const { supabase } = await requireUser();
-  const [account, existing] = await Promise.all([
-    supabase.from("accounts").select("id, type").eq("id", accountId).maybeSingle(),
-    supabase.from("transactions").select("id").eq("account_id", accountId).eq("type", "OPENING_BALANCE").limit(1),
-  ]);
-  if (account.error || !account.data) return { error: "Account not found." };
-  if (existing.data?.length) return { error: "This account already has an opening balance — edit that one instead." };
-
-  const draft = openingDraft(accountId, account.data.type as AccountType, amount, asOf);
-  const { error } = await supabase.rpc("post_transaction", {
-    p_txn: toTxnPayload(draft, "system"),
-    p_components: buildComponents(draft),
-  });
-  if (error) return { error: friendlyDbError(error) };
-  revalidatePath("/", "layout");
-  return { ok: true };
-}
-
 export async function createAccount(_: AccountFormState, form: FormData): Promise<AccountFormState> {
   const name = String(form.get("name") ?? "").trim();
   const type = String(form.get("type") ?? "") as AccountType;
@@ -68,6 +36,7 @@ export async function createAccount(_: AccountFormState, form: FormData): Promis
   const opening = openingRaw === "" ? 0 : Math.round(Number(openingRaw) * 100) / 100;
   if (!Number.isFinite(opening) || opening < 0) return { error: "Opening amount must be zero or more." };
   if (opening > 0 && !isValidIsoDate(asOf)) return { error: "Choose the date the balance is as of." };
+  if (opening > 0 && asOf > todayIso()) return { error: "The opening balance date can't be in the future." };
 
   const id = randomUUID();
   let openingTxn = null;

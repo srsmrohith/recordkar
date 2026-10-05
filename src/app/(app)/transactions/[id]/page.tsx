@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { loadMaster } from "@/lib/data";
 import { draftFromRow, type DraftRow } from "@/lib/engine/treatment";
 import { requireUser } from "@/lib/supabase/server";
@@ -25,6 +25,8 @@ export default async function EditTransactionPage({ params }: PageProps<"/transa
   ]);
   if (txn.error) throw new Error(txn.error.message);
   if (!txn.data) notFound();
+  // Opening balances are changed on their own screen (preview, re-confirmation, return path).
+  if (txn.data.type === "OPENING_BALANCE") redirect(`/accounts/${txn.data.account_id}/opening-balance?returnTo=/transactions`);
 
   const draft = draftFromRow({ ...(txn.data as DraftRow), reference: refs.data?.[0]?.reference ?? null });
   // Manual transfers are From → To (a DEBIT on From). An incoming (CREDIT) transfer, e.g. imported from

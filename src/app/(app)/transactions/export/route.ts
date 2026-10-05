@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { loadMaster } from "@/lib/data";
+import { isCounted, startsFromMaster } from "@/lib/engine/counting";
 import { buildTransactionsCsv, type ExportRow } from "@/lib/export-csv";
 import { todayIso } from "@/lib/format";
+import { summaryNote } from "@/lib/opening-notes";
 import { createClient } from "@/lib/supabase/server";
 import { parseTxnFilters } from "@/lib/txn-filters";
 import { queryTransactions } from "@/lib/txn-query";
@@ -18,7 +20,11 @@ export async function GET(request: NextRequest) {
   const [master, txns] = await Promise.all([loadMaster(supabase), queryTransactions(supabase, filters, MAX_EXPORT_ROWS)]);
   if (txns.error) return new NextResponse(`Export failed: ${txns.error.message}`, { status: 500 });
 
-  const rows = txns.data as unknown as ExportRow[];
+  // Transactions dated before an account's opening balance date aren't counted, so they aren't exported.
+  const starts = startsFromMaster(master);
+  const all = txns.data as unknown as ExportRow[];
+  const rows = all.filter((t) => isCounted(t, starts));
+  const excluded = all.length - rows.length;
   const refs = new Map<string, string[]>();
   for (let i = 0; i < rows.length; i += 500) {
     const chunk = rows.slice(i, i + 500).map((r) => r.id);
@@ -27,7 +33,7 @@ export async function GET(request: NextRequest) {
     for (const x of r.data) refs.set(x.transaction_id, [...(refs.get(x.transaction_id) ?? []), x.reference]);
   }
 
-  return new NextResponse(buildTransactionsCsv(rows, master, refs), {
+  return new NextResponse(buildTransactionsCsv(rows, master, refs, excluded > 0 ? [summaryNote(excluded)] : []), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="recordkar-transactions-${todayIso()}.csv"`,

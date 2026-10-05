@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { loadImportRows, type ImportRowDetail } from "./actions";
+import { loadImportRows, type BeforeOpening, type ImportRowDetail } from "./actions";
+import { BeforeOpeningNotes } from "./before-opening-notes";
 
 export type BatchSummary = {
   id: string;
@@ -23,7 +24,9 @@ const BADGE: Record<ImportRowDetail["outcome"]["kind"], string> = {
 /** Import history; each import expands to show what happened to every uploaded row, and why. */
 export function ImportHistory({ batches }: { batches: BatchSummary[] }) {
   const [open, setOpen] = useState<string | null>(null);
-  const [rows, setRows] = useState<Record<string, ImportRowDetail[] | { error: string } | "loading">>({});
+  const [rows, setRows] = useState<
+    Record<string, { rows: ImportRowDetail[]; beforeOpening: BeforeOpening[] } | { error: string } | "loading">
+  >({});
 
   async function toggle(id: string) {
     const next = open === id ? null : id;
@@ -31,7 +34,7 @@ export function ImportHistory({ batches }: { batches: BatchSummary[] }) {
     if (next && !rows[next]) {
       setRows((r) => ({ ...r, [next]: "loading" }));
       const res = await loadImportRows(next);
-      setRows((r) => ({ ...r, [next]: res.ok ? res.rows : { error: res.error } }));
+      setRows((r) => ({ ...r, [next]: res.ok ? { rows: res.rows, beforeOpening: res.beforeOpening } : { error: res.error } }));
     }
   }
 
@@ -68,8 +71,10 @@ export function ImportHistory({ batches }: { batches: BatchSummary[] }) {
                 ) : "error" in detail ? (
                   <p className="field-error">{detail.error}</p>
                 ) : (
+                  <div className="space-y-3">
+                  <BeforeOpeningNotes groups={detail.beforeOpening} />
                   <ol className="space-y-2">
-                    {detail.map((r) => (
+                    {detail.rows.map((r) => (
                       <li key={r.rowNumber} className="grid grid-cols-[3.5rem_1fr] gap-x-2 text-sm sm:grid-cols-[3.5rem_1fr_auto]">
                         <span className="text-xs text-ink-3 tabular">Row {r.rowNumber}</span>
                         <span className="min-w-0">
@@ -100,6 +105,7 @@ export function ImportHistory({ batches }: { batches: BatchSummary[] }) {
                       </li>
                     ))}
                   </ol>
+                  </div>
                 )}
               </div>
             )}

@@ -54,6 +54,7 @@ All transaction attributes — Category, Merchant, Person, Group, Event/Occasion
 - **Credit card EMI principal is excluded from Net Balance** and shown as its own separate, muted line — so a running EMI doesn't make everyday spendable balance look artificially negative.
 - EMI principal shown here must read from the same source as the Loans module's reconstruction (§6 of original doc) — never a separately maintained number.
 - Only show the EMI principal line when nonzero.
+- **Opening balance date = start of an account's records** (the balance before that day's transactions). A transaction counts only if its date is on or after the opening balance date of every account it touches (both legs of a transfer); uncounted transactions are excluded whole from balances, Net worth, Net balance, surplus, the 4-month table, reports and CSV export, decided at calculation time (nothing stored or deleted). Manual entries and edits dated before an account's opening date are blocked (form and database), as are future dates; imported rows may still be approved but aren't counted. Notes appear on Queue cards, the import summary and Import history, the Accounts page, the Transactions list and the Dashboard. Changing the opening date previews the effect and is recorded in the Edit log. Details: `docs/phase1-decisions.md`.
 - Same net-balance logic (exclude EMI principal from the everyday number) likely applies to any EMI-bearing account, not just credit cards — open decision on scope.
 
 ---

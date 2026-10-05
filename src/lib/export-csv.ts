@@ -53,7 +53,13 @@ export function safeCell(value: string | null | undefined): string {
 
 const nameOf = (list: { id: string; name: string }[], id: string | null) => (id ? list.find((x) => x.id === id)?.name ?? "" : "");
 
-export function buildTransactionsCsv(rows: ExportRow[], master: MasterData, referencesByTxn: Map<string, string[]>): string {
+export function buildTransactionsCsv(
+  rows: ExportRow[],
+  master: MasterData,
+  referencesByTxn: Map<string, string[]>,
+  /** Extra lines after the disclaimer, e.g. how many transactions weren't counted. */
+  notes: string[] = [],
+): string {
   const data = rows.map((t) => {
     const amount = Number(t.amount);
     const out = t.direction === "DEBIT";
@@ -86,5 +92,6 @@ export function buildTransactionsCsv(rows: ExportRow[], master: MasterData, refe
     ];
   });
   // Disclaimer first (requirements §8: every export carries it), then the table.
-  return `${Papa.unparse([[EXPORT_DISCLAIMER]])}\r\n${Papa.unparse({ fields: [...EXPORT_COLUMNS], data })}\r\n`;
+  const header = Papa.unparse([[EXPORT_DISCLAIMER], ...notes.map((n) => [n])]);
+  return `${header}\r\n${Papa.unparse({ fields: [...EXPORT_COLUMNS], data })}\r\n`;
 }
