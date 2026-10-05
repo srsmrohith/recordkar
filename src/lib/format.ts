@@ -18,15 +18,14 @@ export function todayIso(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: APP_TIME_ZONE }).format(new Date());
 }
 
+// Fixed three-letter months: the en-IN locale writes September as "Sept".
+const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "04 Oct 2026" */
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
   const [y, m, d] = iso.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  return `${String(d).padStart(2, "0")} ${MONTHS_SHORT[m - 1]} ${y}`;
 }
 
 /** The calendar date (YYYY-MM-DD) of a timestamp in India time. */
@@ -36,15 +35,13 @@ export function isoDateInIndia(timestamp: string): string {
 
 /** A timestamp in India time, e.g. "04 Oct 2026, 4:35 pm". */
 export function formatDateTime(timestamp: string): string {
-  return new Date(timestamp).toLocaleString("en-IN", {
+  const time = new Date(timestamp).toLocaleTimeString("en-IN", {
     timeZone: APP_TIME_ZONE,
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
   });
+  return `${formatDate(isoDateInIndia(timestamp))}, ${time}`;
 }
 
 /** First day of the month containing `iso`, offset by `delta` months. */
@@ -54,9 +51,11 @@ export function monthStart(iso: string, delta = 0): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** "Sep 2026" (short) or "September 2026" (long). */
 export function monthLabel(iso: string, style: "short" | "long" = "short"): string {
   const [y, m] = iso.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-IN", { month: style, year: "numeric", timeZone: "UTC" });
+  if (style === "short") return `${MONTHS_SHORT[m - 1]} ${y}`;
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-IN", { month: "long", year: "numeric", timeZone: "UTC" });
 }
 
 export const ACCOUNT_TYPE_LABELS = {

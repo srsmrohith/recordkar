@@ -184,14 +184,14 @@ function MonthsSummary({ months }: { months: Month[] }) {
               return (
                 <tr key={m.month} className="border-t border-border">
                   <td className="whitespace-nowrap py-2 pr-1 sm:pr-2">{monthLabel(m.month)}</td>
-                  <td className="whitespace-nowrap px-1 py-2 text-right sm:px-2">{m.hasData ? inr(m.income) : <NoData />}</td>
-                  <td className="whitespace-nowrap px-1 py-2 text-right sm:px-2">{m.hasData ? inr(m.expense) : <NoData />}</td>
+                  <td className="whitespace-nowrap px-1 py-2 text-right sm:px-2">{m.hasData ? inrWhole(m.income) : <NoData />}</td>
+                  <td className="whitespace-nowrap px-1 py-2 text-right sm:px-2">{m.hasData ? inrWhole(m.expense) : <NoData />}</td>
                   <td className="whitespace-nowrap px-1 py-2 text-right font-medium sm:px-2">
-                    {m.hasData ? `${s < 0 ? "−" : ""}${inr(Math.abs(s))}` : <NoData />}
+                    {m.hasData ? `${s < 0 ? "−" : ""}${inrWhole(Math.abs(s))}` : <NoData />}
                   </td>
                   <td
                     className="hidden py-2 pl-2 sm:table-cell"
-                    title={m.hasData ? `${monthLabel(m.month, "long")}: ${s < 0 ? "deficit" : "surplus"} ${inr(Math.abs(s))}` : "No transactions yet"}
+                    title={m.hasData ? `${monthLabel(m.month, "long")}: ${s < 0 ? "deficit" : "surplus"} ${inrWhole(Math.abs(s))}` : "No transactions yet"}
                   >
                     <div className="relative h-3" aria-hidden="true">
                       <div className="absolute inset-y-0 left-1/2 w-px bg-border" />
@@ -212,7 +212,7 @@ function MonthsSummary({ months }: { months: Month[] }) {
       {adjusted.length > 0 && (
         <p className="mt-2 text-xs text-ink-3">
           Balance adjustments (not counted in surplus):{" "}
-          {adjusted.map((m) => `${monthLabel(m.month)} ${m.adjustments < 0 ? "−" : "+"}${inr(Math.abs(m.adjustments))}`).join(" · ")}
+          {adjusted.map((m) => `${monthLabel(m.month)} ${m.adjustments < 0 ? "−" : "+"}${inrWhole(Math.abs(m.adjustments))}`).join(" · ")}
         </p>
       )}
     </section>
